@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人类图 · Human Design Chart</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background:#0f0f1a; color:#e0e0e0; min-height:100vh; }
+.container { max-width:960px; margin:0 auto; padding:20px; }
+h1 { text-align:center; font-size:28px; color:#a78bfa; margin:20px 0; letter-spacing:2px; }
+h1 span { font-size:14px; color:#888; display:block; margin-top:4px; }
+.form-card { background:#1a1a2e; border-radius:16px; padding:24px; margin:16px 0; }
+.form-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.form-group { flex:1; min-width:100px; }
+.form-group label { display:block; font-size:12px; color:#888; margin-bottom:4px; }
+.form-group input, .form-group select { width:100%; padding:10px 12px; background:#252540; border:1px solid #333; border-radius:8px; color:#e0e0e0; font-size:14px; }
+.form-group input:focus { border-color:#a78bfa; outline:none; }
+.btn { display:block; width:100%; padding:14px; background:linear-gradient(135deg,#7c3aed,#a78bfa); color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; margin-top:8px; }
+.btn:hover { opacity:0.9; }
+.btn:disabled { opacity:0.5; cursor:not-allowed; }
+.result { display:none; margin-top:24px; }
+.chart-header { text-align:center; margin-bottom:20px; }
+.chart-type { font-size:32px; font-weight:700; }
+.chart-type.generator { color:#f59e0b; }
+.chart-type.mg { color:#f59e0b; }
+.chart-type.manifestor { color:#ef4444; }
+.chart-type.projector { color:#3b82f6; }
+.chart-type.reflector { color:#10b981; }
+.chart-meta { font-size:14px; color:#888; margin-top:8px; }
+.chart-meta span { margin:0 8px; }
+.section { background:#1a1a2e; border-radius:12px; padding:20px; margin:12px 0; }
+.section h2 { font-size:18px; color:#a78bfa; margin-bottom:12px; border-bottom:1px solid #2a2a40; padding-bottom:8px; }
+.channel-card { background:#252540; border-radius:8px; padding:14px; margin:8px 0; border-left:3px solid #a78bfa; }
+.channel-card .ch-name { font-weight:600; color:#c4b5fd; }
+.channel-card .ch-center { font-size:12px; color:#888; }
+.channel-card .ch-body { font-size:14px; margin-top:8px; line-height:1.6; }
+.center-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.center-item { background:#252540; border-radius:8px; padding:10px; font-size:13px; }
+.center-item.defined { border-left:3px solid #4ade80; }
+.center-item.undefined { border-left:3px solid #6b7280; }
+.center-item .c-name { font-weight:600; }
+.center-item .c-status { font-size:11px; }
+.center-item .c-gates { font-size:11px; color:#888; margin-top:4px; }
+.reading-text { font-size:14px; line-height:1.8; color:#ccc; }
+.reading-text p { margin:8px 0; }
+.loading { text-align:center; padding:40px; }
+.loading .spinner { width:40px; height:40px; border:3px solid #333; border-top:3px solid #a78bfa; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 12px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.svg-container { text-align:center; margin:16px 0; }
+.svg-container svg { max-width:100%; height:auto; }
+.tabs { display:flex; gap:8px; margin-bottom:16px; }
+.tab { padding:8px 16px; background:#252540; border:none; border-radius:8px; color:#888; cursor:pointer; font-size:13px; }
+.tab.active { background:#7c3aed; color:#fff; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔮 人类图<span>Human Design Chart System</span></h1>
+
+  <div class="form-card">
+    <div class="form-row">
+      <div class="form-group"><label>出生年份</label><input type="number" id="year" value="1982" min="1900" max="2100"></div>
+      <div class="form-group"><label>月份</label><input type="number" id="month" value="10" min="1" max="12"></div>
+      <div class="form-group"><label>日期</label><input type="number" id="day" value="9" min="1" max="31"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>小时</label><input type="number" id="hour" value="21" min="0" max="23"></div>
+      <div class="form-group"><label>分钟</label><input type="number" id="minute" value="45" min="0" max="59"></div>
+      <div class="form-group"><label>时区</label><input type="number" id="tz" value="8" step="0.5"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>纬度</label><input type="number" id="lat" value="30.94" step="0.01"></div>
+      <div class="form-group"><label>经度</label><input type="number" id="lng" value="118.75" step="0.01"></div>
+    </div>
+    <button class="btn" id="calcBtn" onclick="calculate()">✨ 计算我的人类图</button>
+  </div>
+
+  <div id="loading" class="loading" style="display:none">
+    <div class="spinner"></div>
+    <div>正在计算星历数据...</div>
+  </div>
+
+  <div id="result" class="result">
+    <div class="chart-header">
+      <div id="chartType" class="chart-type"></div>
+      <div id="chartMeta" class="chart-meta"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('bodygraph')">📊 Bodygraph</button>
+      <button class="tab" onclick="switchTab('channels')">⚡ 通道</button>
+      <button class="tab" onclick="switchTab('centers')">🎯 中心</button>
+      <button class="tab" onclick="switchTab('reading')">📖 解读</button>
+    </div>
+
+    <div id="tab-bodygraph" class="tab-content active">
+      <div class="section">
+        <div id="svgContainer" class="svg-container"></div>
+      </div>
+    </div>
+
+    <div id="tab-channels" class="tab-content">
+      <div class="section">
+        <h2>活化通道</h2>
+        <div id="channelsContainer"></div>
+      </div>
+    </div>
+
+    <div id="tab-centers" class="tab-content">
+      <div class="section">
+        <h2>能量中心</h2>
+        <div id="centersContainer" class="center-grid"></div>
+      </div>
+    </div>
+
+    <div id="tab-reading" class="tab-content">
+      <div class="section">
+        <div id="readingContainer" class="reading-text"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+async function calculate() {
+  const btn = document.getElementById('calcBtn');
+  btn.disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('result').style.display = 'none';
+
+  const body = {
+    year: +document.getElementById('year').value,
+    month: +document.getElementById('month').value,
+    day: +document.getElementById('day').value,
+    hour: +document.getElementById('hour').value,
+    minute: +document.getElementById('minute').value,
+    tz_offset: +document.getElementById('tz').value,
+    lat: +document.getElementById('lat').value,
+    lng: +document.getElementById('lng').value,
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/reading?format=markdown`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    renderResult(data, body);
+  } catch (e) {
+    alert('计算失败: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+function renderResult(data, body) {
+  const chart = data.chart;
+  document.getElementById('result').style.display = 'block';
+
+  // Header
+  const typeEl = document.getElementById('chartType');
+  typeEl.textContent = chart.type_zh;
+  typeEl.className = 'chart-type ' + chart.type_key.toLowerCase().replace(/\s+/g,'');
+
+  document.getElementById('chartMeta').innerHTML =
+    `<span>人生角色 ${chart.profile}</span><span>${chart.authority_zh}</span><span>${chart.definition_type === 'single' ? '单一定义' : chart.definition_type}</span>` +
+    `<br><span style="color:#666">${body.year}-${body.month}-${body.day} ${body.hour}:${String(body.minute).padStart(2,'0')} UTC${body.tz_offset>=0?'+':''}${body.tz_offset}</span>`;
+
+  // Channels
+  const chCont = document.getElementById('channelsContainer');
+  chCont.innerHTML = chart.channels.map(ch => `
+    <div class="channel-card">
+      <div class="ch-name">${ch.gate1}-${ch.gate2} ${ch.name_zh}</div>
+      <div class="ch-center">人格: ${ch.personality_gates.join(',')} | 设计: ${ch.design_gates.join(',')}</div>
+    </div>
+  `).join('');
+
+  // Centers
+  const ceCont = document.getElementById('centersContainer');
+  ceCont.innerHTML = Object.entries(chart.centers).map(([k, c]) => `
+    <div class="center-item ${c.is_defined?'defined':'undefined'}">
+      <div class="c-name">${c.name_zh} ${c.is_defined?'✅':'⬜'}</div>
+      <div class="c-status">${c.is_defined?'有定义':'开放'}</div>
+      ${c.activated_gates.length ? `<div class="c-gates">闸门: ${c.activated_gates.join(', ')}</div>` : ''}
+    </div>
+  `).join('');
+
+  // Reading
+  const readCont = document.getElementById('readingContainer');
+  if (data.reading_markdown) {
+    readCont.innerHTML = marked ? marked.parse(data.reading_markdown) : data.reading_markdown.replace(/\n/g,'<br>');
+  } else if (data.reading) {
+    readCont.innerHTML = `<pre>${JSON.stringify(data.reading, null, 2)}</pre>`;
+  }
+
+  // Bodygraph SVG
+  fetch(`${API_BASE}/chart`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  }).then(r => r.json()).then(chartData => {
+    // Request SVG from server
+    fetch(`${API_BASE}/bodygraph`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({chart: chartData}),
+    }).then(r => r.text()).then(svg => {
+      document.getElementById('svgContainer').innerHTML = svg;
+    }).catch(() => {
+      document.getElementById('svgContainer').innerHTML = '<p style="color:#666">SVG 渲染暂不可用</p>';
+    });
+  });
+}
+</script>
+</body>
+</html>

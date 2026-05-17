@@ -1,0 +1,220 @@
+"""FastAPI application for Human Design chart and reading API."""
+import hashlib
+import json
+from datetime import datetime
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, Response
+from pydantic import BaseModel, Field
+import os
+
+from hd_api.dependencies import (
+    do_calculate, do_reading, get_gate_info, get_channel_info, get_type_info,
+)
+from hd_interp.readings.gate_readings import GATE_READINGS
+from hd_interp.readings.channel_readings import CHANNEL_READINGS
+
+app = FastAPI(
+    title="Human Design Chart API",
+    description="Calculate Human Design charts and generate Chinese interpretations",
+    version="1.0.0",
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Simple in-memory cache
+_reading_cache: dict = {}
+
+
+class ChartRequest(BaseModel):
+    year: int = Field(..., ge=1900, le=2100, description="Birth year")
+    month: int = Field(..., ge=1, le=12, description="Birth month")
+    day: int = Field(..., ge=1, le=31, description="Birth day")
+    hour: int = Field(..., ge=0, le=23, description="Birth hour (0-23)")
+    minute: int = Field(..., ge=0, le=59, description="Birth minute")
+    timezone_offset: float = Field(8.0, description="Timezone offset from UTC (e.g. +8 for CST)")
+    lat: float = Field(..., ge=-90, le=90, description="Birth latitude")
+    lng: float = Field(..., ge=-180, le=180, description="Birth longitude")
+
+
+def _chart_id(req: ChartRequest) -> str:
+    """Generate a stable cache key from request params."""
+    raw = f"{req.year}-{req.month}-{req.day}-{req.hour}-{req.minute}-{req.timezone_offset}-{req.lat}-{req.lng}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _chart_to_dict(chart) -> dict:
+    """Convert ChartResult to a JSON-serializable dict."""
+    def _activation_to_dict(a):
+        return {'longitude': a.longitude, 'gate': a.gate, 'line': a.line}
+
+    def _center_to_dict(c):
+        return {
+            'name': c.name, 'name_zh': c.name_zh, 'name_en': c.name_en,
+            'is_defined': c.is_defined, 'activated_gates': c.activated_gates,
+        }
+
+    def _channel_to_dict(ch):
+        return {
+            'gate1': ch.gate1, 'gate2': ch.gate2,
+            'name_zh': ch.name_zh, 'name_en': ch.name_en,
+            'personality_gates': ch.personality_gates,
+            'design_gates': ch.design_gates,
+        }
+
+    return {
+        'type_key': chart.type_key,
+        'type_zh': chart.type_zh,
+        'type_en': chart.type_en,
+        'authority_zh': chart.authority_zh,
+        'authority_en': chart.authority_en,
+        'profile': chart.profile,
+        'profile_conscious_line': chart.profile_conscious_line,
+        'profile_design_line': chart.profile_design_line,
+        'definition_type': chart.definition_type,
+        'incarnation_cross_zh': chart.incarnation_cross_zh,
+        'incarnation_cross_en': chart.incarnation_cross_en,
+        'incarnation_cross_gates': chart.incarnation_cross_gates,
+        'design_date_approx': chart.design_date_approx,
+        'channels': [_channel_to_dict(ch) for ch in chart.channels],
+        'centers': {k: _center_to_dict(v) for k, v in chart.centers.items()},
+        'personality': {k: _activation_to_dict(v) for k, v in chart.personality.items()},
+        'design': {k: _activation_to_dict(v) for k, v in chart.design.items()},
+    }
+
+
+@app.post("/chart")
+def calculate_chart_api(req: ChartRequest):
+    """Calculate a Human Design chart from birth data."""
+    try:
+        chart = do_calculate(
+            req.year, req.month, req.day, req.hour, req.minute,
+            req.timezone_offset, req.lat, req.lng,
+        )
+        return _chart_to_dict(chart)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/reading")
+def calculate_reading_api(req: ChartRequest, format: Optional[str] = "json"):
+    """Calculate chart and generate full Chinese interpretation."""
+    try:
+        chart = do_calculate(
+            req.year, req.month, req.day, req.hour, req.minute,
+            req.timezone_offset, req.lat, req.lng,
+        )
+        reading = do_reading(chart)
+        chart_dict = _chart_to_dict(chart)
+
+        cid = _chart_id(req)
+        _reading_cache[cid] = {'chart': chart_dict, 'reading': reading}
+
+        result = {'chart_id': cid, 'chart': chart_dict, 'reading': reading}
+
+        if format == "markdown":
+            from hd_interp.formatter import format_reading_markdown
+            result['reading_markdown'] = format_reading_markdown(reading)
+        elif format == "plain":
+            from hd_interp.formatter import format_reading_plain
+            result['reading_plain'] = format_reading_plain(reading)
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/reading/{chart_id}")
+def get_cached_reading(chart_id: str):
+    """Retrieve a cached reading by chart_id."""
+    if chart_id not in _reading_cache:
+        raise HTTPException(status_code=404, detail="Reading not found")
+    return _reading_cache[chart_id]
+
+
+@app.get("/gate/{gate_number}")
+def gate_info(gate_number: int):
+    """Get detailed info for a specific gate (1-64)."""
+    if gate_number < 1 or gate_number > 64:
+        raise HTTPException(status_code=400, detail="Gate number must be 1-64")
+    info = get_gate_info(gate_number)
+    if not info:
+        raise HTTPException(status_code=404, detail="Gate not found")
+    # Add reading
+    reading = GATE_READINGS.get(gate_number, {})
+    return {**info, 'theme': reading.get('theme', ''), 'conscious': reading.get('conscious', ''), 'unconscious': reading.get('unconscious', '')}
+
+
+@app.get("/channel/{g1}/{g2}")
+def channel_info(g1: int, g2: int):
+    """Get info for a specific channel by its two gate numbers."""
+    info = get_channel_info(g1, g2)
+    if not info:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    # Add reading
+    ch_key = (g1, g2) if (g1, g2) in CHANNEL_READINGS else (g2, g1)
+    reading = CHANNEL_READINGS.get(ch_key, {})
+    return {**info, 'body': reading.get('body', '')}
+
+
+class BodygraphRequest(BaseModel):
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
+    timezone_offset: float = 8.0
+    lat: float
+    lng: float
+
+
+@app.post("/bodygraph")
+def render_bodygraph_api(req: BodygraphRequest):
+    """Calculate chart and return SVG bodygraph."""
+    try:
+        chart = do_calculate(
+            req.year, req.month, req.day, req.hour, req.minute,
+            req.timezone_offset, req.lat, req.lng,
+        )
+        from adapters import chart_to_render_dict
+        from hd_render import render_bodygraph as _render
+        render_data = chart_to_render_dict(chart)
+        svg = _render(render_data)
+        return Response(content=svg, media_type="image/svg+xml")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/type/{type_name}")
+def type_info(type_name: str):
+    """Get info for a specific type."""
+    from hd_constants import TYPES
+    info = get_type_info(type_name)
+    if not info:
+        raise HTTPException(status_code=404, detail=f"Type '{type_name}' not found. Valid types: {list(TYPES.keys())}")
+    from hd_interp.readings.type_readings import TYPE_READINGS
+    type_reading = TYPE_READINGS.get(type_name, {})
+    return {**info, 'title': type_reading.get('title', ''), 'body': type_reading.get('body', '')}
+
+
+# Mount static files and serve index
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(_static_dir):
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
+@app.get("/")
+def index():
+    _index = os.path.join(_static_dir, "index.html")
+    if os.path.exists(_index):
+        return HTMLResponse(open(_index).read())
+    return HTMLResponse("<h1>Human Design API</h1><p>Use /docs for API reference</p>")
