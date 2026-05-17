@@ -1,6 +1,7 @@
 """FastAPI application for Human Design chart and reading API."""
 import hashlib
 import json
+from collections import OrderedDict
 from datetime import datetime
 from typing import Optional
 
@@ -32,8 +33,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Simple in-memory cache
-_reading_cache: dict = {}
+# Simple LRU cache with max size to prevent unbounded memory growth
+_CACHE_MAX_SIZE = 256
+_reading_cache: OrderedDict = OrderedDict()
+
+
+def _cache_put(key: str, value: dict):
+    """Add to cache, evicting oldest entry if at capacity."""
+    _reading_cache[key] = value
+    _reading_cache.move_to_end(key)
+    while len(_reading_cache) > _CACHE_MAX_SIZE:
+        _reading_cache.popitem(last=False)
 
 
 class ChartRequest(BaseModel):
@@ -107,7 +117,7 @@ def calculate_chart_api(req: ChartRequest):
 
 
 @app.post("/reading")
-def calculate_reading_api(req: ChartRequest, format: Optional[str] = "json"):
+def calculate_reading_api(req: ChartRequest, output_format: Optional[str] = "json"):
     """Calculate chart and generate full Chinese interpretation."""
     try:
         chart = do_calculate(
@@ -118,14 +128,14 @@ def calculate_reading_api(req: ChartRequest, format: Optional[str] = "json"):
         chart_dict = _chart_to_dict(chart)
 
         cid = _chart_id(req)
-        _reading_cache[cid] = {'chart': chart_dict, 'reading': reading}
+        _cache_put(cid, {'chart': chart_dict, 'reading': reading})
 
         result = {'chart_id': cid, 'chart': chart_dict, 'reading': reading}
 
-        if format == "markdown":
+        if output_format == "markdown":
             from hd_interp.formatter import format_reading_markdown
             result['reading_markdown'] = format_reading_markdown(reading)
-        elif format == "plain":
+        elif output_format == "plain":
             from hd_interp.formatter import format_reading_plain
             result['reading_plain'] = format_reading_plain(reading)
 
@@ -167,15 +177,9 @@ def channel_info(g1: int, g2: int):
     return {**info, 'body': reading.get('body', '')}
 
 
-class BodygraphRequest(BaseModel):
-    year: int
-    month: int
-    day: int
-    hour: int
-    minute: int
-    timezone_offset: float = 8.0
-    lat: float
-    lng: float
+class BodygraphRequest(ChartRequest):
+    """Alias for ChartRequest used by the bodygraph endpoint."""
+    pass
 
 
 @app.post("/bodygraph")
@@ -216,5 +220,6 @@ if os.path.isdir(_static_dir):
 def index():
     _index = os.path.join(_static_dir, "index.html")
     if os.path.exists(_index):
-        return HTMLResponse(open(_index).read())
+        with open(_index, encoding='utf-8') as f:
+            return HTMLResponse(f.read())
     return HTMLResponse("<h1>Human Design API</h1><p>Use /docs for API reference</p>")

@@ -1,11 +1,12 @@
 """Chart analysis: determine channels, centers, type, authority, profile, definition."""
 import sys
-sys.path.insert(0, '/root/.openclaw/workspace/hd-chart-system')
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from hd_constants import (
     CENTERS, CHANNELS, GATE_TO_CHANNELS, GATE_INFO,
     TYPES, AUTHORITY_PRIORITY, LINE_INFO, INCARNATION_CROSSES,
-    MOTOR_CENTERS, CENTER_CONNECTIONS,
+    MOTOR_CENTERS,
 )
 from hd_calc.models import ChartResult, ChannelActivation, CenterInfo
 
@@ -67,28 +68,65 @@ def _determine_centers(all_gates, channels):
     return centers
 
 
-def _determine_type(centers, channels):
-    """Determine the Type based on defined centers."""
-    defined = {name for name, c in centers.items() if c.is_defined}
-    sacral_defined = centers.get('Sacral', CenterInfo('Sacral','','',False)).is_defined
-    throat_defined = centers.get('Throat', CenterInfo('Throat','','',False)).is_defined
+def _build_channel_graph(channels):
+    """Build an adjacency graph of centers connected by activated channels.
 
-    # Check if any motor center connects to throat via a channel
-    motor_to_throat = False
+    Returns a dict: center_name -> set of directly connected center_names
+    (only through activated channels, not all possible bodygraph connections).
+    """
+    graph = {}
     for ch in channels:
         c1, c2 = CHANNELS[(ch.gate1, ch.gate2)]['centers']
-        if (c1 == 'Throat' and c2 in MOTOR_CENTERS) or \
-           (c2 == 'Throat' and c1 in MOTOR_CENTERS):
-            motor_to_throat = True
-            break
+        graph.setdefault(c1, set()).add(c2)
+        graph.setdefault(c2, set()).add(c1)
+    return graph
+
+
+def _motor_reaches_throat(channels):
+    """Check if any motor center can reach the Throat via activated channels.
+
+    Uses BFS on the graph of centers connected by activated channels.
+    This correctly handles indirect connections like Sacral → Spleen → Throat.
+    """
+    channel_graph = _build_channel_graph(channels)
+
+    # If Throat is not in the graph at all, no motor can reach it
+    if 'Throat' not in channel_graph:
+        return False
+
+    for motor in MOTOR_CENTERS:
+        if motor not in channel_graph:
+            continue
+        # BFS from this motor center to see if it can reach Throat
+        visited = set()
+        queue = [motor]
+        while queue:
+            current = queue.pop(0)
+            if current == 'Throat':
+                return True
+            if current in visited:
+                continue
+            visited.add(current)
+            for neighbor in channel_graph.get(current, set()):
+                if neighbor not in visited:
+                    queue.append(neighbor)
+    return False
+
+
+def _determine_type(centers, channels):
+    """Determine the Type based on defined centers and channel connectivity.
+
+    Uses BFS to check if any motor center can reach the Throat
+    through a chain of activated channels (not just direct connection).
+    """
+    defined = {name for name, c in centers.items() if c.is_defined}
+    sacral_defined = centers.get('Sacral', CenterInfo('Sacral','','',False)).is_defined
+
+    motor_to_throat = _motor_reaches_throat(channels)
 
     if not defined:
         return 'Reflector'
     elif sacral_defined and motor_to_throat:
-        # Manifesting Generator check: if sacral defined + motor to throat
-        # AND there's also a direct connection from a motor to throat that isn't
-        # just the sacral (or if there's a manifesting channel pattern)
-        # Simplified: MG if sacral + motor-to-throat
         return 'ManifestingGenerator'
     elif sacral_defined:
         return 'Generator'
@@ -116,11 +154,18 @@ def _determine_profile(personality, design):
     return f"{p_sun_line}/{d_sun_line}", p_sun_line, d_sun_line
 
 
-def _determine_definition_type(centers):
-    """Determine definition type (single, split, triple, quadruple, none)."""
+def _determine_definition_type(centers, channels):
+    """Determine definition type (single, split, triple, quadruple, none).
+
+    Uses the graph of centers connected by activated channels (not all
+    possible bodygraph connections) to find connected components.
+    """
     defined = {name for name, c in centers.items() if c.is_defined}
     if not defined:
         return 'none'
+
+    # Build adjacency only from activated channels
+    channel_graph = _build_channel_graph(channels)
 
     # Find connected components among defined centers
     visited = set()
@@ -134,7 +179,8 @@ def _determine_definition_type(centers):
                 if current in visited:
                     continue
                 visited.add(current)
-                for neighbor in CENTER_CONNECTIONS.get(current, []):
+                # Only traverse through activated channel connections
+                for neighbor in channel_graph.get(current, set()):
                     if neighbor in defined and neighbor not in visited:
                         queue.append(neighbor)
 
@@ -150,8 +196,13 @@ def _determine_incarnation_cross(personality, design):
     d_earth = design.get('Earth', PlanetActivation(0,4,1)).gate
     cross_gates = [p_sun, p_earth, d_sun, d_earth]
 
-    cross_key = tuple(sorted(cross_gates))
+    # Try original order first (P_Sun, P_Earth, D_Sun, D_Earth)
+    cross_key = tuple(cross_gates)
     cross_info = INCARNATION_CROSSES.get(cross_key)
+
+    # Also try sorted order for backward compatibility with any sorted keys
+    if not cross_info:
+        cross_info = INCARNATION_CROSSES.get(tuple(sorted(cross_gates)))
 
     if cross_info:
         return cross_info['zh'], cross_info['en'], cross_gates
@@ -176,7 +227,7 @@ def analyze_chart(personality, design, personality_positions, design_positions):
     type_info = TYPES[type_key]
     authority = _determine_authority(centers)
     profile_str, p_line, d_line = _determine_profile(personality, design)
-    definition_type = _determine_definition_type(centers)
+    definition_type = _determine_definition_type(centers, channels)
     cross_zh, cross_en, cross_gates = _determine_incarnation_cross(personality, design)
 
     return ChartResult(

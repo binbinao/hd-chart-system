@@ -43,19 +43,16 @@ for center, gates in GATE_POSITIONS.items():
         GATE_TO_POSITION[gate] = (center, gx, gy, angle)
 
 
-def _determine_channel_type(chart, g1, g2):
+def _determine_channel_type(personality_gates, design_gates, g1, g2):
     """Determine if a channel is personality (black), design (red), or both (striped)."""
-    personality_gates = {v[1] for v in chart.get('personality', {}).values() if v}
-    design_gates = {v[1] for v in chart.get('design', {}).values() if v}
-    
     p1 = g1 in personality_gates
     p2 = g2 in personality_gates
     d1 = g1 in design_gates
     d2 = g2 in design_gates
-    
+
     has_p = p1 or p2
     has_d = d1 or d2
-    
+
     if has_p and has_d:
         return 'both'
     elif has_p:
@@ -64,14 +61,11 @@ def _determine_channel_type(chart, g1, g2):
         return 'design'
 
 
-def _determine_gate_type(chart, gate):
+def _determine_gate_type(personality_gates, design_gates, gate):
     """Determine if a gate is personality, design, or both."""
-    personality_gates = {v[1] for v in chart.get('personality', {}).values() if v}
-    design_gates = {v[1] for v in chart.get('design', {}).values() if v}
-    
     in_p = gate in personality_gates
     in_d = gate in design_gates
-    
+
     if in_p and in_d:
         return 'both'
     elif in_p:
@@ -406,7 +400,7 @@ def render_bodygraph(chart, output_path=None):
     
     # Active channels (draw before centers so they go behind)
     for g1, g2 in channels:
-        ch_type = _determine_channel_type(chart, g1, g2)
+        ch_type = _determine_channel_type(personality_gates, design_gates, g1, g2)
         parts.append(_channel_svg(g1, g2, ch_type))
     
     # Centers
@@ -421,7 +415,7 @@ def render_bodygraph(chart, output_path=None):
         if gate not in GATE_TO_POSITION:
             continue
         center, gx, gy, angle = GATE_TO_POSITION[gate]
-        gate_type = _determine_gate_type(chart, gate)
+        gate_type = _determine_gate_type(personality_gates, design_gates, gate)
         parts.append(_gate_marker_svg(gate, gate_type, gx, gy, angle))
     
     # Footer

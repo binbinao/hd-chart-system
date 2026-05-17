@@ -124,6 +124,7 @@ h1 span { font-size:14px; color:#888; display:block; margin-top:4px; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 const API_BASE = window.location.origin;
 
@@ -146,13 +147,13 @@ async function calculate() {
     day: +document.getElementById('day').value,
     hour: +document.getElementById('hour').value,
     minute: +document.getElementById('minute').value,
-    tz_offset: +document.getElementById('tz').value,
+    timezone_offset: +document.getElementById('tz').value,
     lat: +document.getElementById('lat').value,
     lng: +document.getElementById('lng').value,
   };
 
   try {
-    const res = await fetch(`${API_BASE}/reading?format=markdown`, {
+    const res = await fetch(`${API_BASE}/reading?output_format=markdown`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body),
@@ -208,22 +209,15 @@ function renderResult(data, body) {
     readCont.innerHTML = `<pre>${JSON.stringify(data.reading, null, 2)}</pre>`;
   }
 
-  // Bodygraph SVG
-  fetch(`${API_BASE}/chart`, {
+  // Bodygraph SVG - directly request with birth data (no need for extra /chart call)
+  fetch(`${API_BASE}/bodygraph`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(body),
-  }).then(r => r.json()).then(chartData => {
-    // Request SVG from server
-    fetch(`${API_BASE}/bodygraph`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({chart: chartData}),
-    }).then(r => r.text()).then(svg => {
-      document.getElementById('svgContainer').innerHTML = svg;
-    }).catch(() => {
-      document.getElementById('svgContainer').innerHTML = '<p style="color:#666">SVG 渲染暂不可用</p>';
-    });
+  }).then(r => r.text()).then(svg => {
+    document.getElementById('svgContainer').innerHTML = svg;
+  }).catch(() => {
+    document.getElementById('svgContainer').innerHTML = '<p style="color:#666">SVG 渲染暂不可用</p>';
   });
 }
 </script>

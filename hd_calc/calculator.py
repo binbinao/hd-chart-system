@@ -1,12 +1,13 @@
 """Core calculation logic for Human Design charts."""
 import sys
 import math
+import os
 from collections import deque
 
 import swisseph as swe
 
-# Add parent dir to path for hd_constants import
-sys.path.insert(0, '/root/.openclaw/workspace/hd-chart-system')
+# Add project root to path for hd_constants import
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from hd_constants import (
     WHEEL_OFFSET_DEGREES, GATE_SIZE_DEGREES, GATE_ORDER,
     PLANET_IDS, DERIVED_PLANETS, PLANET_NAMES_ORDERED,

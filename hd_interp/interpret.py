@@ -1,6 +1,7 @@
 """Main interpretation logic - generates structured readings from ChartResult."""
 import sys
-sys.path.insert(0, '/root/.openclaw/workspace/hd-chart-system')
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from hd_interp.readings.type_readings import TYPE_READINGS
 from hd_interp.readings.channel_readings import CHANNEL_READINGS

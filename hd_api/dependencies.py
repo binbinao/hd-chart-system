@@ -1,6 +1,7 @@
 """Dependency injection for the HD API."""
 import sys
-sys.path.insert(0, '/root/.openclaw/workspace/hd-chart-system')
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from hd_calc import calculate_chart
 from hd_calc.models import CalculateRequest

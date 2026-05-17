@@ -1,8 +1,9 @@
 """Tests for Human Design chart calculator."""
 import sys
+import os
 import pytest
 
-sys.path.insert(0, '/root/.openclaw/workspace/hd-chart-system')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from hd_calc.models import CalculateRequest
 from hd_calc.calculator import calculate_chart
