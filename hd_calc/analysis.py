@@ -5,7 +5,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from hd_constants import (
     CENTERS, CHANNELS, GATE_TO_CHANNELS, GATE_INFO,
-    TYPES, AUTHORITY_PRIORITY, LINE_INFO, INCARNATION_CROSSES,
+    TYPES, AUTHORITY_PRIORITY, LINE_INFO,
+    INCARNATION_CROSSES, CROSS_NAMES, CROSS_NAME_OVERRIDES,
+    PROFILE_TO_ANGLE, ANGLE_NAMES,
     MOTOR_CENTERS,
 )
 from hd_calc.models import ChartResult, ChannelActivation, CenterInfo
@@ -188,26 +190,43 @@ def _determine_definition_type(centers, channels):
     return mapping.get(components, 'quadruple_split')
 
 
-def _determine_incarnation_cross(personality, design):
-    """Determine incarnation cross from Sun/Earth gates."""
-    p_sun = personality.get('Sun', PlanetActivation(0,1,1)).gate
-    p_earth = personality.get('Earth', PlanetActivation(0,2,1)).gate
-    d_sun = design.get('Sun', PlanetActivation(0,3,1)).gate
-    d_earth = design.get('Earth', PlanetActivation(0,4,1)).gate
+def _determine_incarnation_cross(personality, design, profile_str):
+    """Determine incarnation cross from Sun/Earth gates and profile.
+
+    Uses the new gate+profile lookup (192 crosses = 64 gates × 3 angles).
+    Falls back to legacy INCARNATION_CROSSES dict, then to a generic name.
+    """
+    p_sun = personality.get('Sun', PlanetActivation(0, 1, 1)).gate
+    p_earth = personality.get('Earth', PlanetActivation(0, 2, 1)).gate
+    d_sun = design.get('Sun', PlanetActivation(0, 3, 1)).gate
+    d_earth = design.get('Earth', PlanetActivation(0, 4, 1)).gate
     cross_gates = [p_sun, p_earth, d_sun, d_earth]
 
-    # Try original order first (P_Sun, P_Earth, D_Sun, D_Earth)
+    # --- New lookup: gate + profile → angle → cross name ---
+    angle = PROFILE_TO_ANGLE.get(profile_str, 'right')
+    base_name = CROSS_NAMES.get(p_sun)
+
+    if base_name:
+        # Check if this gate has an angle-specific override
+        overrides = CROSS_NAME_OVERRIDES.get(p_sun, {})
+        name_info = overrides.get(angle, base_name)
+
+        # Build full name with angle prefix
+        prefix = ANGLE_NAMES[angle]
+        cross_zh = prefix['zh'] + name_info['zh']
+        cross_en = prefix['en'] + name_info['en']
+        return cross_zh, cross_en, cross_gates
+
+    # --- Legacy fallback: exact 4-gate tuple lookup ---
     cross_key = tuple(cross_gates)
     cross_info = INCARNATION_CROSSES.get(cross_key)
-
-    # Also try sorted order for backward compatibility with any sorted keys
     if not cross_info:
         cross_info = INCARNATION_CROSSES.get(tuple(sorted(cross_gates)))
 
     if cross_info:
         return cross_info['zh'], cross_info['en'], cross_gates
 
-    # Generate a generic cross name
+    # --- Final fallback: generate generic name ---
     return f"交叉之{GATE_INFO[p_sun]['zh']}/{GATE_INFO[d_sun]['zh']}", \
            f"Cross of {GATE_INFO[p_sun]['en']}/{GATE_INFO[d_sun]['en']}", \
            cross_gates
@@ -228,7 +247,7 @@ def analyze_chart(personality, design, personality_positions, design_positions):
     authority = _determine_authority(centers)
     profile_str, p_line, d_line = _determine_profile(personality, design)
     definition_type = _determine_definition_type(centers, channels)
-    cross_zh, cross_en, cross_gates = _determine_incarnation_cross(personality, design)
+    cross_zh, cross_en, cross_gates = _determine_incarnation_cross(personality, design, profile_str)
 
     return ChartResult(
         request=None,

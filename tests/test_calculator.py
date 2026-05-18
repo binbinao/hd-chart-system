@@ -242,3 +242,78 @@ class TestEdgeCases:
         )
         chart = calculate_chart(req)
         assert chart.definition_type in ('single', 'split', 'triple', 'quadruple', 'none')
+
+
+class TestIncarnationCross:
+    """Test the 192 incarnation cross lookup system."""
+
+    def test_robin_cross_has_proper_name(self):
+        """Robin's chart should get a real cross name, not the generic fallback."""
+        req = CalculateRequest(
+            year=1982, month=10, day=9,
+            hour=21, minute=45,
+            timezone_offset=8.0,
+            lat=30.94, lng=118.75,
+        )
+        chart = calculate_chart(req)
+        # Should NOT be the generic "交叉之X/Y" fallback
+        assert '交叉之' not in chart.incarnation_cross_zh or \
+               '右角度' in chart.incarnation_cross_zh or \
+               '左角度' in chart.incarnation_cross_zh or \
+               '并列' in chart.incarnation_cross_zh
+
+    def test_ra_uru_hu_cross_is_left_angle(self):
+        """Ra Uru Hu (profile 5/1) should get a Left Angle Cross."""
+        req = CalculateRequest(
+            year=1948, month=4, day=9,
+            hour=12, minute=25,
+            timezone_offset=2.0,
+            lat=48.14, lng=11.58,
+        )
+        chart = calculate_chart(req)
+        assert '左角度' in chart.incarnation_cross_zh
+        assert 'Left Angle Cross' in chart.incarnation_cross_en
+
+    def test_right_angle_profile(self):
+        """A 1/3 profile should get a Right Angle Cross."""
+        from hd_constants import PROFILE_TO_ANGLE
+        assert PROFILE_TO_ANGLE['1/3'] == 'right'
+        assert PROFILE_TO_ANGLE['3/6'] == 'right'
+
+    def test_juxtaposition_profile(self):
+        """Profile 4/1 is the only Juxtaposition."""
+        from hd_constants import PROFILE_TO_ANGLE
+        assert PROFILE_TO_ANGLE['4/1'] == 'juxtaposition'
+        juxt_profiles = [p for p, a in PROFILE_TO_ANGLE.items() if a == 'juxtaposition']
+        assert juxt_profiles == ['4/1']
+
+    def test_left_angle_profiles(self):
+        """Profiles 5/1, 5/2, 6/2, 6/3 are Left Angle."""
+        from hd_constants import PROFILE_TO_ANGLE
+        for p in ['5/1', '5/2', '6/2', '6/3']:
+            assert PROFILE_TO_ANGLE[p] == 'left'
+
+    def test_all_64_gates_covered(self):
+        """Every gate 1-64 should have a cross name."""
+        from hd_constants import CROSS_NAMES
+        for gate in range(1, 65):
+            assert gate in CROSS_NAMES, f"Gate {gate} missing from CROSS_NAMES"
+
+    def test_cross_names_have_zh_en(self):
+        """Every cross name entry should have 'zh' and 'en' keys."""
+        from hd_constants import CROSS_NAMES
+        for gate, info in CROSS_NAMES.items():
+            assert 'zh' in info, f"Gate {gate} missing 'zh'"
+            assert 'en' in info, f"Gate {gate} missing 'en'"
+
+    def test_cross_gates_always_4(self):
+        """Incarnation cross should always have exactly 4 gates."""
+        req = CalculateRequest(
+            year=2000, month=1, day=1,
+            hour=12, minute=0,
+            timezone_offset=0.0,
+            lat=51.5, lng=0.0,
+        )
+        chart = calculate_chart(req)
+        assert len(chart.incarnation_cross_gates) == 4
+        assert all(1 <= g <= 64 for g in chart.incarnation_cross_gates)
