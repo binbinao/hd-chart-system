@@ -57,13 +57,18 @@ def format_reading_markdown(reading: dict) -> str:
                 parts.append(f"**活化闸门:** {', '.join(str(g) for g in c['activated_gates'])}")
             parts.append('')
 
-    # Key gates
+    # Key gates with line readings
     parts.append("## 关键闸门")
     for side_label, side_key in [("意识 (Personality)", "personality"), ("潜意识 (Design)", "design")]:
         parts.append(f"### {side_label}")
         gates = reading.get('gates', {}).get(side_key, {})
         for planet, g in gates.items():
-            parts.append(f"- **{planet}** → {g.get('gate', '')}号闸门 {g.get('gate_name', '')} ({g.get('i_ching', '')}) 第{g.get('line', '')}线")
+            line_info = ''
+            if g.get('line_name'):
+                line_info = f" 「{g['line_name']}」"
+            parts.append(f"- **{planet}** → {g.get('gate', '')}号闸门 {g.get('gate_name', '')} ({g.get('i_ching', '')}) 第{g.get('line', '')}线{line_info}")
+            if g.get('line_desc'):
+                parts.append(f"  > {g['line_desc']}")
         parts.append('')
 
     # Incarnation cross

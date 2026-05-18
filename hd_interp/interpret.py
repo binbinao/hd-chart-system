@@ -8,6 +8,7 @@ from hd_interp.readings.channel_readings import CHANNEL_READINGS
 from hd_interp.readings.center_readings import CENTER_READINGS
 from hd_interp.readings.gate_readings import GATE_READINGS
 from hd_interp.readings.profile_readings import PROFILE_READINGS
+from hd_interp.readings.line_readings import LINE_READINGS
 from hd_constants import GATE_INFO, CHANNELS, TYPES
 
 
@@ -79,10 +80,11 @@ def generate_reading(chart_result) -> dict:
             'body': state_reading.get('body', ''),
         }
 
-    # 6. Gates reading - from personality and design
+    # 6. Gates reading - from personality and design (with line readings)
     reading['gates'] = {'personality': {}, 'design': {}}
     for planet_name, activation in chart_result.personality.items():
         gate_reading = GATE_READINGS.get(activation.gate, {})
+        line_reading = LINE_READINGS.get((activation.gate, activation.line), {})
         reading['gates']['personality'][planet_name] = {
             'gate': activation.gate,
             'line': activation.line,
@@ -91,9 +93,12 @@ def generate_reading(chart_result) -> dict:
             'theme': gate_reading.get('theme', ''),
             'conscious': gate_reading.get('conscious', ''),
             'unconscious': gate_reading.get('unconscious', ''),
+            'line_name': line_reading.get('name', ''),
+            'line_desc': line_reading.get('desc', ''),
         }
     for planet_name, activation in chart_result.design.items():
         gate_reading = GATE_READINGS.get(activation.gate, {})
+        line_reading = LINE_READINGS.get((activation.gate, activation.line), {})
         reading['gates']['design'][planet_name] = {
             'gate': activation.gate,
             'line': activation.line,
@@ -102,6 +107,8 @@ def generate_reading(chart_result) -> dict:
             'theme': gate_reading.get('theme', ''),
             'conscious': gate_reading.get('conscious', ''),
             'unconscious': gate_reading.get('unconscious', ''),
+            'line_name': line_reading.get('name', ''),
+            'line_desc': line_reading.get('desc', ''),
         }
 
     # 7. Definition type
