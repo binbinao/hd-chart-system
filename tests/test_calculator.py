@@ -76,18 +76,23 @@ class TestRobinChart:
 
 
 class TestManifestorChart:
-    """Known Manifestor: 1940-07-20 10:00, UTC+1, London.
-    Computed: Manifestor, Profile 2/2
-    Defined: Ajna, Throat, Heart (motor-to-throat, no Sacral)
+    """Ra Uru Hu: 1948-04-09 12:25, UTC+2, Munich (48.14N, 11.58E)
+
+    Verified with Moshier ephemeris:
+    - Type: Manifestor (motor-to-throat via indirect path, no Sacral)
+    - Profile: 5/1
+    - Authority: Splenic
+    - Channels: 10-20, 10-57, 20-57, 23-43, 25-51
+    - Defined centers: Ajna, Throat, G, Heart, Spleen
     """
 
     @pytest.fixture
     def chart(self):
         req = CalculateRequest(
-            year=1940, month=7, day=20,
-            hour=10, minute=0,
-            timezone_offset=1.0,
-            lat=51.5, lng=0.0,
+            year=1948, month=4, day=9,
+            hour=12, minute=25,
+            timezone_offset=2.0,
+            lat=48.14, lng=11.58,
         )
         return calculate_chart(req)
 
@@ -101,8 +106,8 @@ class TestManifestorChart:
         assert chart.centers['Throat'].is_defined
 
     def test_has_motor_center(self, chart):
-        # At least one motor should be defined and connected to throat
-        motor_defined = any(chart.centers[m].is_defined for m in ['Heart', 'SolarPlexus', 'Root', 'Sacral'] if m != 'Sacral')
+        # At least one motor should be defined (Heart via 25-51)
+        motor_defined = any(chart.centers[m].is_defined for m in ['Heart', 'SolarPlexus', 'Root'] )
         assert motor_defined
 
     def test_authority_not_sacral(self, chart):
@@ -110,18 +115,23 @@ class TestManifestorChart:
 
 
 class TestProjectorChart:
-    """Known Projector: 1955-12-01 06:00, UTC+0, London.
-    Computed: Projector, Profile 3/6
-    Defined: Ajna, Throat, G, Heart, SolarPlexus (no Sacral, no motor-to-throat)
+    """Projector: 1961-08-04 13:10, UTC-5, Minneapolis (44.98N, 93.27W)
+
+    Verified with Moshier ephemeris:
+    - Type: Projector (no Sacral, no motor-to-throat)
+    - Profile: 5/1
+    - Authority: Emotional
+    - Channels: 1-8, 30-41
+    - Defined centers: Throat, G, SolarPlexus, Root
     """
 
     @pytest.fixture
     def chart(self):
         req = CalculateRequest(
-            year=1955, month=12, day=1,
-            hour=6, minute=0,
-            timezone_offset=0.0,
-            lat=51.5, lng=0.0,
+            year=1961, month=8, day=4,
+            hour=13, minute=10,
+            timezone_offset=-5.0,
+            lat=44.98, lng=-93.27,
         )
         return calculate_chart(req)
 
