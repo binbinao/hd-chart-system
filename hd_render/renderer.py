@@ -27,8 +27,8 @@ def _build_gate_positions():
             # Distribute gates evenly around the center perimeter
             # Start from top, go clockwise
             angle = -math.pi / 2 + (2 * math.pi * i / n)
-            # Place gate markers slightly outside the center shape
-            offset = 1.15
+            # Place gate markers further outside the center shape to avoid overlap
+            offset = 1.35
             gx = cx + rx * offset * math.cos(angle)
             gy = cy + ry * offset * math.sin(angle)
             positions[center_name][gate] = (gx, gy, angle)
@@ -148,10 +148,23 @@ def _center_shape_svg(center_name, cx, cy, rx, ry, defined, activated_gates):
     # Gate numbers inside the center
     if activated_gates:
         gate_strs = [str(g) for g in sorted(activated_gates)]
-        text = ' '.join(gate_strs)
         font_color = '#1a1a1a' if defined else '#8888aa'
-        font_size = min(14, max(9, 180 // max(len(gate_strs), 1)))
-        svg += f'  <text x="{cx}" y="{cy + 4}" text-anchor="middle" dominant-baseline="middle" font-family="{S.HEADER_FONT}" font-size="{font_size}" fill="{font_color}" font-weight="600">{text}</text>\n'
+        # For many gates, split into two lines
+        if len(gate_strs) > 4:
+            mid = len(gate_strs) // 2
+            line1 = ' '.join(gate_strs[:mid])
+            line2 = ' '.join(gate_strs[mid:])
+            font_size = min(11, max(8, 120 // max(len(gate_strs), 1)))
+            svg += f'  <text x="{cx}" y="{cy - 5}" text-anchor="middle" dominant-baseline="middle" font-family="{S.HEADER_FONT}" font-size="{font_size}" fill="{font_color}" font-weight="600">{line1}</text>\n'
+            svg += f'  <text x="{cx}" y="{cy + 9}" text-anchor="middle" dominant-baseline="middle" font-family="{S.HEADER_FONT}" font-size="{font_size}" fill="{font_color}" font-weight="600">{line2}</text>\n'
+        elif len(gate_strs) > 2:
+            text = ' '.join(gate_strs)
+            font_size = min(12, max(9, 140 // max(len(gate_strs), 1)))
+            svg += f'  <text x="{cx}" y="{cy + 4}" text-anchor="middle" dominant-baseline="middle" font-family="{S.HEADER_FONT}" font-size="{font_size}" fill="{font_color}" font-weight="600">{text}</text>\n'
+        else:
+            text = ' '.join(gate_strs)
+            font_size = 14
+            svg += f'  <text x="{cx}" y="{cy + 4}" text-anchor="middle" dominant-baseline="middle" font-family="{S.HEADER_FONT}" font-size="{font_size}" fill="{font_color}" font-weight="600">{text}</text>\n'
     
     return svg
 
@@ -169,19 +182,19 @@ def _darken(hex_color, amount=0.3):
 def _gate_marker_svg(gate, gate_type, gx, gy, angle):
     """Generate SVG for a gate marker circle + number."""
     r = S.GATE_CIRCLE_RADIUS
-    
+
     if gate_type == 'both':
         fill = S.GATE_BOTH_COLOR
     elif gate_type == 'personality':
         fill = S.GATE_PERSONALITY_COLOR
     else:
         fill = S.GATE_DESIGN_COLOR
-    
+
     # Text offset - push label outward from center
-    text_offset = r + 7
+    text_offset = r + 8
     tx = gx + text_offset * math.cos(angle)
     ty = gy + text_offset * math.sin(angle)
-    
+
     # Anchor based on angle
     if abs(math.cos(angle)) < 0.3:
         anchor = 'middle'
@@ -189,7 +202,7 @@ def _gate_marker_svg(gate, gate_type, gx, gy, angle):
         anchor = 'start'
     else:
         anchor = 'end'
-    
+
     svg = f'  <circle cx="{gx:.1f}" cy="{gy:.1f}" r="{r}" fill="{fill}" stroke="#ffffff" stroke-width="1" stroke-opacity="0.3"/>\n'
     svg += f'  <text x="{tx:.1f}" y="{ty:.1f}" text-anchor="{anchor}" dominant-baseline="middle" font-family="{S.HEADER_FONT}" font-size="{S.GATE_FONT_SIZE}" fill="{S.GATE_NUMBER_COLOR}" font-weight="700">{gate}</text>\n'
     return svg
@@ -199,42 +212,24 @@ def _channel_svg(g1, g2, channel_type):
     """Generate SVG for a channel line between two gates."""
     if g1 not in GATE_TO_POSITION or g2 not in GATE_TO_POSITION:
         return ''
-    
+
     _, x1, y1, _ = GATE_TO_POSITION[g1]
     _, x2, y2, _ = GATE_TO_POSITION[g2]
-    
-    # Get channel info
-    channel_key = (min(g1, g2), max(g1, g2))
-    ch_info = CHANNELS.get(channel_key, {})
-    label = f"{channel_key[0]}-{channel_key[1]}"
-    
+
     if channel_type == 'personality':
         color = S.CHANNEL_PERSONALITY_COLOR
     elif channel_type == 'design':
         color = S.CHANNEL_DESIGN_COLOR
     else:
         color = S.CHANNEL_BOTH_COLOR
-    
+
     svg = f'  <line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{color}" stroke-width="{S.CHANNEL_WIDTH}" stroke-linecap="round"'
-    
+
     if channel_type == 'both':
         svg += f' stroke-dasharray="8,4"'
-    
+
     svg += '/>\n'
-    
-    # Channel label at midpoint
-    mx = (x1 + x2) / 2
-    my = (y1 + y2) / 2
-    # Offset label slightly perpendicular to the line
-    dx = x2 - x1
-    dy = y2 - y1
-    length = math.sqrt(dx*dx + dy*dy) or 1
-    # Perpendicular offset
-    px = -dy / length * 12
-    py = dx / length * 12
-    
-    svg += f'  <text x="{mx + px:.1f}" y="{my + py:.1f}" text-anchor="middle" dominant-baseline="middle" font-family="{S.HEADER_FONT}" font-size="7" fill="{color}" font-weight="600" opacity="0.8">{label}</text>\n'
-    
+
     return svg
 
 

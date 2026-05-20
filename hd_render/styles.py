@@ -76,8 +76,8 @@ GATE_PERSONALITY_COLOR = '#1a1a1a'   # Black
 GATE_DESIGN_COLOR = '#E84040'        # Red
 GATE_BOTH_COLOR = 'url(#gateBothGrad)'  # Half-black, half-red
 
-GATE_CIRCLE_RADIUS = 9
-GATE_FONT_SIZE = 8
+GATE_CIRCLE_RADIUS = 7
+GATE_FONT_SIZE = 9
 
 # ============================================================
 # Channel Colors
