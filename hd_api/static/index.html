@@ -3,122 +3,511 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>人类图 · Human Design Chart</title>
+<title>Human Design | 人类图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;500;700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background:#0f0f1a; color:#e0e0e0; min-height:100vh; }
-.container { max-width:960px; margin:0 auto; padding:20px; }
-h1 { text-align:center; font-size:28px; color:#a78bfa; margin:20px 0; letter-spacing:2px; }
-h1 span { font-size:14px; color:#888; display:block; margin-top:4px; }
-.form-card { background:#1a1a2e; border-radius:16px; padding:24px; margin:16px 0; }
-.form-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
-.form-group { flex:1; min-width:100px; }
-.form-group label { display:block; font-size:12px; color:#888; margin-bottom:4px; }
-.form-group input, .form-group select { width:100%; padding:10px 12px; background:#252540; border:1px solid #333; border-radius:8px; color:#e0e0e0; font-size:14px; }
-.form-group input:focus { border-color:#a78bfa; outline:none; }
-.btn { display:block; width:100%; padding:14px; background:linear-gradient(135deg,#7c3aed,#a78bfa); color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; margin-top:8px; }
-.btn:hover { opacity:0.9; }
-.btn:disabled { opacity:0.5; cursor:not-allowed; }
-.result { display:none; margin-top:24px; }
-.chart-header { text-align:center; margin-bottom:20px; }
-.chart-type { font-size:32px; font-weight:700; }
-.chart-type.generator { color:#f59e0b; }
-.chart-type.mg { color:#f59e0b; }
-.chart-type.manifestor { color:#ef4444; }
-.chart-type.projector { color:#3b82f6; }
-.chart-type.reflector { color:#10b981; }
-.chart-meta { font-size:14px; color:#888; margin-top:8px; }
-.chart-meta span { margin:0 8px; }
-.section { background:#1a1a2e; border-radius:12px; padding:20px; margin:12px 0; }
-.section h2 { font-size:18px; color:#a78bfa; margin-bottom:12px; border-bottom:1px solid #2a2a40; padding-bottom:8px; }
-.channel-card { background:#252540; border-radius:8px; padding:14px; margin:8px 0; border-left:3px solid #a78bfa; }
-.channel-card .ch-name { font-weight:600; color:#c4b5fd; }
-.channel-card .ch-center { font-size:12px; color:#888; }
-.channel-card .ch-body { font-size:14px; margin-top:8px; line-height:1.6; }
-.center-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.center-item { background:#252540; border-radius:8px; padding:10px; font-size:13px; }
-.center-item.defined { border-left:3px solid #4ade80; }
-.center-item.undefined { border-left:3px solid #6b7280; }
-.center-item .c-name { font-weight:600; }
-.center-item .c-status { font-size:11px; }
-.center-item .c-gates { font-size:11px; color:#888; margin-top:4px; }
-.reading-text { font-size:14px; line-height:1.8; color:#ccc; }
-.reading-text p { margin:8px 0; }
-.loading { text-align:center; padding:40px; }
-.loading .spinner { width:40px; height:40px; border:3px solid #333; border-top:3px solid #a78bfa; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 12px; }
-@keyframes spin { to { transform:rotate(360deg); } }
-.svg-container { text-align:center; margin:16px 0; }
-.svg-container svg { max-width:100%; height:auto; }
-.tabs { display:flex; gap:8px; margin-bottom:16px; }
-.tab { padding:8px 16px; background:#252540; border:none; border-radius:8px; color:#888; cursor:pointer; font-size:13px; }
-.tab.active { background:#7c3aed; color:#fff; }
-.tab-content { display:none; }
-.tab-content.active { display:block; }
+:root {
+  --bg-deep: #07080f;
+  --bg-card: rgba(14, 16, 28, 0.85);
+  --bg-input: rgba(20, 24, 42, 0.9);
+  --border-subtle: rgba(193, 167, 115, 0.15);
+  --border-glow: rgba(193, 167, 115, 0.4);
+  --gold: #c1a773;
+  --gold-light: #e8d5a8;
+  --gold-dim: #8a7348;
+  --text-primary: #e8e4dc;
+  --text-secondary: #9a9488;
+  --text-muted: #5e5a52;
+  --accent-generator: #d4a853;
+  --accent-mg: #e8943a;
+  --accent-manifestor: #c75a3a;
+  --accent-projector: #5aa8c7;
+  --accent-reflector: #7ec7a0;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --font-display: 'Noto Serif SC', serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* === Cosmic Background === */
+.cosmos {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.cosmos::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(193,167,115,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 80%, rgba(90,168,199,0.02) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 100% at 50% 50%, rgba(14,16,28,0) 40%, var(--bg-deep) 100%);
+}
+.cosmos canvas { width: 100%; height: 100%; opacity: 0.6; }
+
+/* === Layout === */
+.app {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* === Header === */
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+  animation: fadeDown 1s ease-out;
+}
+.header__icon {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  border: 1.5px solid var(--border-glow);
+  border-radius: 50%;
+  line-height: 48px;
+  font-size: 20px;
+  margin-bottom: 16px;
+  animation: slowSpin 20s linear infinite;
+}
+.header__title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--gold-light);
+  margin-bottom: 6px;
+}
+.header__sub {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-muted);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+
+/* === Form === */
+.form-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 36px 32px 28px;
+  backdrop-filter: blur(12px);
+  animation: fadeUp 0.8s ease-out 0.2s both;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.form-field {
+  position: relative;
+}
+.form-field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.form-field input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.form-field input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(193,167,115,0.08);
+}
+.form-field input::placeholder { color: var(--text-muted); }
+
+.form-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-subtle), transparent);
+  margin: 8px 0 20px;
+}
+
+.btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  border: none;
+  border-radius: var(--radius-md);
+  color: #0a0b10;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.3s, opacity 0.3s;
+}
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(193,167,115,0.2);
+}
+.btn-submit:active { transform: translateY(0); }
+.btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-submit svg { width: 18px; height: 18px; }
+
+/* === Loading === */
+.loading-overlay {
+  display: none;
+  text-align: center;
+  padding: 60px 20px;
+  animation: fadeUp 0.4s ease-out;
+}
+.loading-overlay.active { display: block; }
+.loading-ring {
+  width: 52px; height: 52px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+.loading-text {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+/* === Results === */
+.results {
+  display: none;
+  animation: fadeUp 0.6s ease-out;
+}
+.results.active { display: block; }
+
+.result-header {
+  text-align: center;
+  padding: 40px 0 32px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 32px;
+}
+.result-type {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 6vw, 48px);
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+}
+.result-type.generator { color: var(--accent-generator); }
+.result-type.manifestinggenerator { color: var(--accent-mg); }
+.result-type.manifestor { color: var(--accent-manifestor); }
+.result-type.projector { color: var(--accent-projector); }
+.result-type.reflector { color: var(--accent-reflector); }
+
+.result-meta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.result-meta__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.result-meta__dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--gold-dim);
+}
+
+/* === Tabs === */
+.tabs-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  padding: 4px;
+  background: rgba(14,16,28,0.6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.tab-btn:hover { color: var(--text-secondary); }
+.tab-btn.active {
+  background: rgba(193,167,115,0.12);
+  color: var(--gold-light);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeUp 0.4s ease-out; }
+
+/* === Section Cards === */
+.section-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  backdrop-filter: blur(8px);
+  margin-bottom: 16px;
+}
+.section-card__title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--gold-light);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* === Channels === */
+.channel-item {
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  background: rgba(20,24,42,0.5);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--gold-dim);
+  transition: border-color 0.3s, background 0.3s;
+}
+.channel-item:hover {
+  border-left-color: var(--gold);
+  background: rgba(20,24,42,0.8);
+}
+.channel-item__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.channel-item__meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* === Centers Grid === */
+.centers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.center-card {
+  padding: 14px;
+  background: rgba(20,24,42,0.5);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--text-muted);
+  transition: all 0.3s;
+}
+.center-card.defined { border-left-color: var(--accent-reflector); }
+.center-card__name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.center-card__status {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+.center-card__gates {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+/* === Reading === */
+.reading-content {
+  font-size: 14px;
+  line-height: 2;
+  color: var(--text-secondary);
+}
+.reading-content h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--gold-light);
+  margin: 32px 0 16px;
+  font-weight: 700;
+}
+.reading-content h2 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--gold);
+  margin: 28px 0 12px;
+  font-weight: 500;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.reading-content h3 {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin: 20px 0 8px;
+  font-weight: 600;
+}
+.reading-content p { margin: 8px 0; }
+.reading-content strong { color: var(--text-primary); font-weight: 600; }
+.reading-content ul, .reading-content ol { padding-left: 20px; margin: 8px 0; }
+.reading-content li { margin: 4px 0; }
+.reading-content blockquote {
+  border-left: 2px solid var(--gold-dim);
+  padding-left: 16px;
+  margin: 12px 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* === SVG Container === */
+.bodygraph-container {
+  text-align: center;
+  padding: 8px;
+}
+.bodygraph-container svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
+/* === Animations === */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slowSpin { to { transform: rotate(360deg); } }
+
+/* === Responsive === */
+@media (max-width: 600px) {
+  .app { padding: 24px 16px 60px; }
+  .form-card { padding: 24px 18px 20px; }
+  .form-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .section-card { padding: 20px 16px; }
+  .tabs-nav { flex-wrap: wrap; }
+  .result-meta { gap: 4px 16px; }
+}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🔮 人类图<span>Human Design Chart System</span></h1>
 
+<div class="cosmos"><canvas id="starfield"></canvas></div>
+
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="header__icon">&#9788;</div>
+    <h1 class="header__title">人类图</h1>
+    <p class="header__sub">Human Design System</p>
+  </header>
+
+  <!-- Form -->
   <div class="form-card">
-    <div class="form-row">
-      <div class="form-group"><label>出生年份</label><input type="number" id="year" value="1982" min="1900" max="2100"></div>
-      <div class="form-group"><label>月份</label><input type="number" id="month" value="10" min="1" max="12"></div>
-      <div class="form-group"><label>日期</label><input type="number" id="day" value="9" min="1" max="31"></div>
+    <div class="form-grid">
+      <div class="form-field"><label>Year / 年</label><input type="number" id="year" value="1982" min="1900" max="2100" placeholder="1990"></div>
+      <div class="form-field"><label>Month / 月</label><input type="number" id="month" value="10" min="1" max="12" placeholder="6"></div>
+      <div class="form-field"><label>Day / 日</label><input type="number" id="day" value="9" min="1" max="31" placeholder="15"></div>
+      <div class="form-field"><label>Hour / 时</label><input type="number" id="hour" value="21" min="0" max="23" placeholder="10"></div>
+      <div class="form-field"><label>Minute / 分</label><input type="number" id="minute" value="45" min="0" max="59" placeholder="30"></div>
+      <div class="form-field"><label>UTC Offset</label><input type="number" id="tz" value="8" step="0.5" placeholder="+8"></div>
+      <div class="form-field"><label>Latitude</label><input type="number" id="lat" value="30.94" step="0.01" placeholder="39.9"></div>
+      <div class="form-field"><label>Longitude</label><input type="number" id="lng" value="118.75" step="0.01" placeholder="116.4"></div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>小时</label><input type="number" id="hour" value="21" min="0" max="23"></div>
-      <div class="form-group"><label>分钟</label><input type="number" id="minute" value="45" min="0" max="59"></div>
-      <div class="form-group"><label>时区</label><input type="number" id="tz" value="8" step="0.5"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>纬度</label><input type="number" id="lat" value="30.94" step="0.01"></div>
-      <div class="form-group"><label>经度</label><input type="number" id="lng" value="118.75" step="0.01"></div>
-    </div>
-    <button class="btn" id="calcBtn" onclick="calculate()">✨ 计算我的人类图</button>
+    <div class="form-divider"></div>
+    <button class="btn-submit" id="calcBtn" onclick="calculate()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span>Generate Chart</span>
+    </button>
   </div>
 
-  <div id="loading" class="loading" style="display:none">
-    <div class="spinner"></div>
-    <div>正在计算星历数据...</div>
+  <!-- Loading -->
+  <div class="loading-overlay" id="loading">
+    <div class="loading-ring"></div>
+    <div class="loading-text">Calculating ephemeris...</div>
   </div>
 
-  <div id="result" class="result">
-    <div class="chart-header">
-      <div id="chartType" class="chart-type"></div>
-      <div id="chartMeta" class="chart-meta"></div>
+  <!-- Results -->
+  <div class="results" id="result">
+    <div class="result-header">
+      <div class="result-type" id="chartType"></div>
+      <div class="result-meta" id="chartMeta"></div>
     </div>
 
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('bodygraph')">📊 Bodygraph</button>
-      <button class="tab" onclick="switchTab('channels')">⚡ 通道</button>
-      <button class="tab" onclick="switchTab('centers')">🎯 中心</button>
-      <button class="tab" onclick="switchTab('reading')">📖 解读</button>
-    </div>
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="bodygraph">Bodygraph</button>
+      <button class="tab-btn" data-tab="channels">Channels</button>
+      <button class="tab-btn" data-tab="centers">Centers</button>
+      <button class="tab-btn" data-tab="reading">Reading</button>
+    </nav>
 
-    <div id="tab-bodygraph" class="tab-content active">
-      <div class="section">
-        <div id="svgContainer" class="svg-container"></div>
+    <div class="tab-panel active" id="panel-bodygraph">
+      <div class="section-card">
+        <div class="bodygraph-container" id="svgContainer"></div>
       </div>
     </div>
 
-    <div id="tab-channels" class="tab-content">
-      <div class="section">
-        <h2>活化通道</h2>
+    <div class="tab-panel" id="panel-channels">
+      <div class="section-card">
+        <div class="section-card__title">Active Channels</div>
         <div id="channelsContainer"></div>
       </div>
     </div>
 
-    <div id="tab-centers" class="tab-content">
-      <div class="section">
-        <h2>能量中心</h2>
-        <div id="centersContainer" class="center-grid"></div>
+    <div class="tab-panel" id="panel-centers">
+      <div class="section-card">
+        <div class="section-card__title">Energy Centers</div>
+        <div class="centers-grid" id="centersContainer"></div>
       </div>
     </div>
 
-    <div id="tab-reading" class="tab-content">
-      <div class="section">
-        <div id="readingContainer" class="reading-text"></div>
+    <div class="tab-panel" id="panel-reading">
+      <div class="section-card">
+        <div class="reading-content" id="readingContainer"></div>
       </div>
     </div>
   </div>
@@ -126,20 +515,57 @@ h1 span { font-size:14px; color:#888; display:block; margin-top:4px; }
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-const API_BASE = window.location.origin;
+// === Starfield ===
+(function(){
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = Array.from({length: 120}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.3,
+      a: Math.random(),
+      da: (Math.random() - 0.5) * 0.008
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.a += s.da;
+      if (s.a > 1 || s.a < 0.1) s.da *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(193,167,115,${s.a * 0.5})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  draw();
+})();
 
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
-  document.getElementById(`tab-${name}`).classList.add('active');
-}
+// === Tabs ===
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// === API ===
+const API_BASE = window.location.origin;
 
 async function calculate() {
   const btn = document.getElementById('calcBtn');
   btn.disabled = true;
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('result').style.display = 'none';
+  document.getElementById('loading').classList.add('active');
+  document.getElementById('result').classList.remove('active');
 
   const body = {
     year: +document.getElementById('year').value,
@@ -162,54 +588,59 @@ async function calculate() {
     const data = await res.json();
     renderResult(data, body);
   } catch (e) {
-    alert('计算失败: ' + e.message);
+    alert('Calculation failed: ' + e.message);
   } finally {
     btn.disabled = false;
-    document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading').classList.remove('active');
   }
 }
 
 function renderResult(data, body) {
   const chart = data.chart;
-  document.getElementById('result').style.display = 'block';
+  const result = document.getElementById('result');
+  result.classList.add('active');
+  result.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // Header
+  // Type header
   const typeEl = document.getElementById('chartType');
   typeEl.textContent = chart.type_zh;
-  typeEl.className = 'chart-type ' + chart.type_key.toLowerCase().replace(/\s+/g,'');
+  typeEl.className = 'result-type ' + chart.type_key.toLowerCase();
 
-  document.getElementById('chartMeta').innerHTML =
-    `<span>人生角色 ${chart.profile}</span><span>${chart.authority_zh}</span><span>${chart.definition_type === 'single' ? '单一定义' : chart.definition_type}</span>` +
-    `<br><span style="color:#666">${body.year}-${body.month}-${body.day} ${body.hour}:${String(body.minute).padStart(2,'0')} UTC${body.tz_offset>=0?'+':''}${body.tz_offset}</span>`;
+  // Meta
+  const tz = body.timezone_offset >= 0 ? `+${body.timezone_offset}` : body.timezone_offset;
+  document.getElementById('chartMeta').innerHTML = `
+    <span class="result-meta__item"><span class="result-meta__dot"></span>${chart.profile} Profile</span>
+    <span class="result-meta__item"><span class="result-meta__dot"></span>${chart.authority_zh}</span>
+    <span class="result-meta__item"><span class="result-meta__dot"></span>${chart.definition_type}</span>
+    <span class="result-meta__item" style="color:var(--text-muted)">${body.year}.${body.month}.${body.day} ${String(body.hour).padStart(2,'0')}:${String(body.minute).padStart(2,'0')} UTC${tz}</span>
+  `;
 
   // Channels
-  const chCont = document.getElementById('channelsContainer');
-  chCont.innerHTML = chart.channels.map(ch => `
-    <div class="channel-card">
-      <div class="ch-name">${ch.gate1}-${ch.gate2} ${ch.name_zh}</div>
-      <div class="ch-center">人格: ${ch.personality_gates.join(',')} | 设计: ${ch.design_gates.join(',')}</div>
+  document.getElementById('channelsContainer').innerHTML = chart.channels.map(ch => `
+    <div class="channel-item">
+      <div class="channel-item__name">${ch.gate1}–${ch.gate2} ${ch.name_zh}</div>
+      <div class="channel-item__meta">P: ${ch.personality_gates.join(',')||'—'} &nbsp;|&nbsp; D: ${ch.design_gates.join(',')||'—'}</div>
     </div>
   `).join('');
 
   // Centers
-  const ceCont = document.getElementById('centersContainer');
-  ceCont.innerHTML = Object.entries(chart.centers).map(([k, c]) => `
-    <div class="center-item ${c.is_defined?'defined':'undefined'}">
-      <div class="c-name">${c.name_zh} ${c.is_defined?'✅':'⬜'}</div>
-      <div class="c-status">${c.is_defined?'有定义':'开放'}</div>
-      ${c.activated_gates.length ? `<div class="c-gates">闸门: ${c.activated_gates.join(', ')}</div>` : ''}
+  document.getElementById('centersContainer').innerHTML = Object.entries(chart.centers).map(([k, c]) => `
+    <div class="center-card ${c.is_defined ? 'defined' : ''}">
+      <div class="center-card__name">${c.name_zh}</div>
+      <div class="center-card__status">${c.is_defined ? 'Defined' : 'Open'}</div>
+      ${c.activated_gates.length ? `<div class="center-card__gates">Gates: ${c.activated_gates.join(', ')}</div>` : ''}
     </div>
   `).join('');
 
   // Reading
   const readCont = document.getElementById('readingContainer');
   if (data.reading_markdown) {
-    readCont.innerHTML = marked ? marked.parse(data.reading_markdown) : data.reading_markdown.replace(/\n/g,'<br>');
+    readCont.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.reading_markdown) : data.reading_markdown.replace(/\n/g,'<br>');
   } else if (data.reading) {
-    readCont.innerHTML = `<pre>${JSON.stringify(data.reading, null, 2)}</pre>`;
+    readCont.innerHTML = `<pre style="white-space:pre-wrap;font-size:12px;">${JSON.stringify(data.reading, null, 2)}</pre>`;
   }
 
-  // Bodygraph SVG - directly request with birth data (no need for extra /chart call)
+  // Bodygraph SVG
   fetch(`${API_BASE}/bodygraph`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -217,7 +648,7 @@ function renderResult(data, body) {
   }).then(r => r.text()).then(svg => {
     document.getElementById('svgContainer').innerHTML = svg;
   }).catch(() => {
-    document.getElementById('svgContainer').innerHTML = '<p style="color:#666">SVG 渲染暂不可用</p>';
+    document.getElementById('svgContainer').innerHTML = '<p style="color:var(--text-muted);padding:40px;">Bodygraph rendering unavailable</p>';
   });
 }
 </script>
