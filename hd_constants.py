@@ -51,13 +51,13 @@ PLANET_NAMES_ORDERED = [
 
 CENTERS = {
     'Head':      {'gates': [64, 61, 63],                       'zh': '头脑中心',    'en': 'Head Center'},
-    'Ajna':      {'gates': [24, 4, 17, 43, 11],                'zh': '逻辑中心',    'en': 'Ajna Center'},
-    'Throat':    {'gates': [62, 23, 16, 35, 45, 33, 8, 20, 31, 7, 12, 22],
+    'Ajna':      {'gates': [47, 24, 4, 17, 43, 11],            'zh': '意识中心',    'en': 'Ajna Center'},
+    'Throat':    {'gates': [62, 23, 56, 16, 35, 45, 33, 8, 20, 31, 12],
                                                               'zh': '喉咙中心',    'en': 'Throat Center'},
     'G':         {'gates': [1, 2, 7, 13, 15, 25, 10, 46],     'zh': '自我中心',    'en': 'G Center'},
     'Heart':     {'gates': [21, 40, 26, 51],                   'zh': '意志力中心',  'en': 'Heart Center'},
     'SolarPlexus':{'gates': [36, 22, 37, 6, 49, 55, 30],       'zh': '情绪中心',    'en': 'Solar Plexus'},
-    'Spleen':    {'gates': [57, 44, 50, 28, 18, 48, 32, 54],   'zh': '直觉中心',    'en': 'Spleen Center'},
+    'Spleen':    {'gates': [57, 44, 50, 28, 18, 48, 32],        'zh': '直觉中心',    'en': 'Spleen Center'},
     'Sacral':    {'gates': [5, 14, 29, 59, 9, 3, 42, 27, 34],  'zh': '荐骨中心',    'en': 'Sacral Center'},
     'Root':      {'gates': [38, 54, 58, 60, 52, 39, 53, 19, 41],'zh': '根部中心',   'en': 'Root Center'},
 }
