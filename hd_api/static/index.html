@@ -150,6 +150,164 @@ body {
 }
 .form-field input::placeholder { color: var(--text-muted); }
 
+/* === Location Selector === */
+.location-field {
+  grid-column: 1 / -1;
+  position: relative;
+}
+.location-field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.location-input-wrap {
+  position: relative;
+}
+.location-input-wrap::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a7348' stroke-width='1.5'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z'/%3E%3Ccircle cx='12' cy='9' r='2.5'/%3E%3C/svg%3E");
+  background-size: contain;
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 2;
+}
+.location-input-wrap input {
+  width: 100%;
+  padding: 12px 14px 12px 38px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.location-input-wrap input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(193,167,115,0.08);
+}
+.location-input-wrap input::placeholder { color: var(--text-muted); }
+
+.location-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: rgba(14, 16, 28, 0.97);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(16px);
+  z-index: 100;
+  display: none;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(193,167,115,0.1);
+  animation: dropdownIn 0.2s ease-out;
+}
+.location-dropdown.open { display: block; }
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.location-dropdown::-webkit-scrollbar { width: 5px; }
+.location-dropdown::-webkit-scrollbar-track { background: transparent; }
+.location-dropdown::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+.location-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(193,167,115,0.05);
+}
+.location-item:last-child { border-bottom: none; }
+.location-item:hover, .location-item.highlighted {
+  background: rgba(193,167,115,0.08);
+}
+.location-item__pin {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(193,167,115,0.1);
+  border: 1px solid rgba(193,167,115,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+.location-item__info { flex: 1; min-width: 0; }
+.location-item__name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.location-item__meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.location-item__coord {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  letter-spacing: 0.3px;
+  opacity: 0.7;
+}
+
+.location-selected {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(193,167,115,0.06);
+  border: 1px solid rgba(193,167,115,0.15);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.location-selected.visible { display: flex; }
+.location-selected__icon {
+  color: var(--gold);
+  font-size: 14px;
+}
+.location-selected__text { flex: 1; }
+.location-selected__clear {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.location-selected__clear:hover { color: var(--gold); }
+
+.location-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 .form-divider {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--border-subtle), transparent);
@@ -431,6 +589,8 @@ body {
   .section-card { padding: 20px 16px; }
   .tabs-nav { flex-wrap: wrap; }
   .result-meta { gap: 4px 16px; }
+  .location-item__coord { display: none; }
+  .location-selected { font-size: 11px; flex-wrap: wrap; }
 }
 </style>
 </head>
@@ -454,10 +614,23 @@ body {
       <div class="form-field"><label>Day / 日</label><input type="number" id="day" value="9" min="1" max="31" placeholder="15"></div>
       <div class="form-field"><label>Hour / 时</label><input type="number" id="hour" value="21" min="0" max="23" placeholder="10"></div>
       <div class="form-field"><label>Minute / 分</label><input type="number" id="minute" value="45" min="0" max="59" placeholder="30"></div>
-      <div class="form-field"><label>UTC Offset</label><input type="number" id="tz" value="8" step="0.5" placeholder="+8"></div>
-      <div class="form-field"><label>Latitude</label><input type="number" id="lat" value="30.94" step="0.01" placeholder="39.9"></div>
-      <div class="form-field"><label>Longitude</label><input type="number" id="lng" value="118.75" step="0.01" placeholder="116.4"></div>
     </div>
+    <div class="form-divider"></div>
+    <div class="location-field">
+      <label>Birthplace / 出生地</label>
+      <div class="location-input-wrap">
+        <input type="text" id="locationSearch" placeholder="搜索城市，如：北京、上海、New York..." autocomplete="off">
+        <div class="location-dropdown" id="locationDropdown"></div>
+      </div>
+      <div class="location-selected" id="locationSelected">
+        <span class="location-selected__icon">◉</span>
+        <span class="location-selected__text" id="locationSelectedText"></span>
+        <span class="location-selected__clear" id="locationClear" title="清除">×</span>
+      </div>
+    </div>
+    <input type="hidden" id="tz" value="8">
+    <input type="hidden" id="lat" value="30.94">
+    <input type="hidden" id="lng" value="118.75">
     <div class="form-divider"></div>
     <button class="btn-submit" id="calcBtn" onclick="calculate()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -546,6 +719,230 @@ body {
   resize();
   window.addEventListener('resize', resize);
   draw();
+})();
+
+// === City Database ===
+const CITIES = [
+  // 中国 - 直辖市
+  {name:"北京", en:"Beijing", region:"中国", lat:39.90, lng:116.40, tz:8},
+  {name:"上海", en:"Shanghai", region:"中国", lat:31.23, lng:121.47, tz:8},
+  {name:"天津", en:"Tianjin", region:"中国", lat:39.13, lng:117.20, tz:8},
+  {name:"重庆", en:"Chongqing", region:"中国", lat:29.56, lng:106.55, tz:8},
+  // 中国 - 省会 & 主要城市
+  {name:"广州", en:"Guangzhou", region:"广东", lat:23.13, lng:113.26, tz:8},
+  {name:"深圳", en:"Shenzhen", region:"广东", lat:22.54, lng:114.06, tz:8},
+  {name:"杭州", en:"Hangzhou", region:"浙江", lat:30.27, lng:120.15, tz:8},
+  {name:"南京", en:"Nanjing", region:"江苏", lat:32.06, lng:118.80, tz:8},
+  {name:"苏州", en:"Suzhou", region:"江苏", lat:31.30, lng:120.62, tz:8},
+  {name:"成都", en:"Chengdu", region:"四川", lat:30.57, lng:104.07, tz:8},
+  {name:"武汉", en:"Wuhan", region:"湖北", lat:30.59, lng:114.30, tz:8},
+  {name:"西安", en:"Xi'an", region:"陕西", lat:34.26, lng:108.94, tz:8},
+  {name:"长沙", en:"Changsha", region:"湖南", lat:28.23, lng:112.94, tz:8},
+  {name:"郑州", en:"Zhengzhou", region:"河南", lat:34.75, lng:113.65, tz:8},
+  {name:"福州", en:"Fuzhou", region:"福建", lat:26.07, lng:119.30, tz:8},
+  {name:"厦门", en:"Xiamen", region:"福建", lat:24.48, lng:118.09, tz:8},
+  {name:"济南", en:"Jinan", region:"山东", lat:36.65, lng:116.98, tz:8},
+  {name:"青岛", en:"Qingdao", region:"山东", lat:36.07, lng:120.38, tz:8},
+  {name:"大连", en:"Dalian", region:"辽宁", lat:38.91, lng:121.60, tz:8},
+  {name:"沈阳", en:"Shenyang", region:"辽宁", lat:41.80, lng:123.43, tz:8},
+  {name:"哈尔滨", en:"Harbin", region:"黑龙江", lat:45.75, lng:126.65, tz:8},
+  {name:"长春", en:"Changchun", region:"吉林", lat:43.88, lng:125.32, tz:8},
+  {name:"昆明", en:"Kunming", region:"云南", lat:25.04, lng:102.71, tz:8},
+  {name:"贵阳", en:"Guiyang", region:"贵州", lat:26.65, lng:106.63, tz:8},
+  {name:"南宁", en:"Nanning", region:"广西", lat:22.82, lng:108.37, tz:8},
+  {name:"合肥", en:"Hefei", region:"安徽", lat:31.82, lng:117.23, tz:8},
+  {name:"南昌", en:"Nanchang", region:"江西", lat:28.68, lng:115.89, tz:8},
+  {name:"石家庄", en:"Shijiazhuang", region:"河北", lat:38.04, lng:114.51, tz:8},
+  {name:"太原", en:"Taiyuan", region:"山西", lat:37.87, lng:112.55, tz:8},
+  {name:"呼和浩特", en:"Hohhot", region:"内蒙古", lat:40.84, lng:111.75, tz:8},
+  {name:"兰州", en:"Lanzhou", region:"甘肃", lat:36.06, lng:103.83, tz:8},
+  {name:"乌鲁木齐", en:"Urumqi", region:"新疆", lat:43.83, lng:87.62, tz:8},
+  {name:"拉萨", en:"Lhasa", region:"西藏", lat:29.65, lng:91.11, tz:8},
+  {name:"西宁", en:"Xining", region:"青海", lat:36.62, lng:101.78, tz:8},
+  {name:"银川", en:"Yinchuan", region:"宁夏", lat:38.49, lng:106.23, tz:8},
+  {name:"海口", en:"Haikou", region:"海南", lat:20.04, lng:110.35, tz:8},
+  {name:"三亚", en:"Sanya", region:"海南", lat:18.25, lng:109.50, tz:8},
+  {name:"珠海", en:"Zhuhai", region:"广东", lat:22.27, lng:113.58, tz:8},
+  {name:"无锡", en:"Wuxi", region:"江苏", lat:31.57, lng:120.30, tz:8},
+  {name:"宁波", en:"Ningbo", region:"浙江", lat:29.87, lng:121.55, tz:8},
+  {name:"温州", en:"Wenzhou", region:"浙江", lat:28.00, lng:120.67, tz:8},
+  {name:"东莞", en:"Dongguan", region:"广东", lat:23.02, lng:113.75, tz:8},
+  {name:"佛山", en:"Foshan", region:"广东", lat:23.02, lng:113.12, tz:8},
+  {name:"烟台", en:"Yantai", region:"山东", lat:37.46, lng:121.45, tz:8},
+  {name:"常州", en:"Changzhou", region:"江苏", lat:31.81, lng:119.97, tz:8},
+  {name:"徐州", en:"Xuzhou", region:"江苏", lat:34.26, lng:117.18, tz:8},
+  {name:"绍兴", en:"Shaoxing", region:"浙江", lat:30.00, lng:120.58, tz:8},
+  // 中国 - 港澳台
+  {name:"香港", en:"Hong Kong", region:"中国", lat:22.32, lng:114.17, tz:8},
+  {name:"澳门", en:"Macau", region:"中国", lat:22.20, lng:113.55, tz:8},
+  {name:"台北", en:"Taipei", region:"台湾", lat:25.03, lng:121.57, tz:8},
+  {name:"高雄", en:"Kaohsiung", region:"台湾", lat:22.63, lng:120.30, tz:8},
+  {name:"台中", en:"Taichung", region:"台湾", lat:24.15, lng:120.67, tz:8},
+  // 亚洲
+  {name:"东京", en:"Tokyo", region:"日本", lat:35.68, lng:139.69, tz:9},
+  {name:"大阪", en:"Osaka", region:"日本", lat:34.69, lng:135.50, tz:9},
+  {name:"首尔", en:"Seoul", region:"韩国", lat:37.57, lng:126.98, tz:9},
+  {name:"新加坡", en:"Singapore", region:"新加坡", lat:1.35, lng:103.82, tz:8},
+  {name:"曼谷", en:"Bangkok", region:"泰国", lat:13.76, lng:100.50, tz:7},
+  {name:"吉隆坡", en:"Kuala Lumpur", region:"马来西亚", lat:3.14, lng:101.69, tz:8},
+  {name:"雅加达", en:"Jakarta", region:"印尼", lat:-6.21, lng:106.85, tz:7},
+  {name:"马尼拉", en:"Manila", region:"菲律宾", lat:14.60, lng:120.98, tz:8},
+  {name:"河内", en:"Hanoi", region:"越南", lat:21.03, lng:105.85, tz:7},
+  {name:"孟买", en:"Mumbai", region:"印度", lat:19.08, lng:72.88, tz:5.5},
+  {name:"新德里", en:"New Delhi", region:"印度", lat:28.61, lng:77.21, tz:5.5},
+  {name:"迪拜", en:"Dubai", region:"阿联酋", lat:25.20, lng:55.27, tz:4},
+  // 欧洲
+  {name:"伦敦", en:"London", region:"英国", lat:51.51, lng:-0.13, tz:0},
+  {name:"巴黎", en:"Paris", region:"法国", lat:48.86, lng:2.35, tz:1},
+  {name:"柏林", en:"Berlin", region:"德国", lat:52.52, lng:13.40, tz:1},
+  {name:"罗马", en:"Rome", region:"意大利", lat:41.90, lng:12.50, tz:1},
+  {name:"马德里", en:"Madrid", region:"西班牙", lat:40.42, lng:-3.70, tz:1},
+  {name:"阿姆斯特丹", en:"Amsterdam", region:"荷兰", lat:52.37, lng:4.90, tz:1},
+  {name:"莫斯科", en:"Moscow", region:"俄罗斯", lat:55.76, lng:37.62, tz:3},
+  {name:"维也纳", en:"Vienna", region:"奥地利", lat:48.21, lng:16.37, tz:1},
+  {name:"苏黎世", en:"Zurich", region:"瑞士", lat:47.37, lng:8.54, tz:1},
+  {name:"斯德哥尔摩", en:"Stockholm", region:"瑞典", lat:59.33, lng:18.07, tz:1},
+  // 北美
+  {name:"纽约", en:"New York", region:"美国", lat:40.71, lng:-74.01, tz:-5},
+  {name:"洛杉矶", en:"Los Angeles", region:"美国", lat:34.05, lng:-118.24, tz:-8},
+  {name:"旧金山", en:"San Francisco", region:"美国", lat:37.77, lng:-122.42, tz:-8},
+  {name:"芝加哥", en:"Chicago", region:"美国", lat:41.88, lng:-87.63, tz:-6},
+  {name:"华盛顿", en:"Washington D.C.", region:"美国", lat:38.91, lng:-77.04, tz:-5},
+  {name:"西雅图", en:"Seattle", region:"美国", lat:47.61, lng:-122.33, tz:-8},
+  {name:"波士顿", en:"Boston", region:"美国", lat:42.36, lng:-71.06, tz:-5},
+  {name:"多伦多", en:"Toronto", region:"加拿大", lat:43.65, lng:-79.38, tz:-5},
+  {name:"温哥华", en:"Vancouver", region:"加拿大", lat:49.28, lng:-123.12, tz:-8},
+  // 大洋洲
+  {name:"悉尼", en:"Sydney", region:"澳大利亚", lat:-33.87, lng:151.21, tz:10},
+  {name:"墨尔本", en:"Melbourne", region:"澳大利亚", lat:-37.81, lng:144.96, tz:10},
+  {name:"奥克兰", en:"Auckland", region:"新西兰", lat:-36.85, lng:174.76, tz:12},
+  // 南美
+  {name:"圣保罗", en:"São Paulo", region:"巴西", lat:-23.55, lng:-46.63, tz:-3},
+  {name:"布宜诺斯艾利斯", en:"Buenos Aires", region:"阿根廷", lat:-34.60, lng:-58.38, tz:-3},
+  // 非洲
+  {name:"开普敦", en:"Cape Town", region:"南非", lat:-33.93, lng:18.42, tz:2},
+  {name:"开罗", en:"Cairo", region:"埃及", lat:30.04, lng:31.24, tz:2},
+];
+
+// === Location Search Logic ===
+(function() {
+  const input = document.getElementById('locationSearch');
+  const dropdown = document.getElementById('locationDropdown');
+  const selected = document.getElementById('locationSelected');
+  const selectedText = document.getElementById('locationSelectedText');
+  const clearBtn = document.getElementById('locationClear');
+  let highlightIdx = -1;
+  let currentResults = [];
+
+  function searchCities(query) {
+    if (!query || query.length === 0) return [];
+    const q = query.toLowerCase().trim();
+    return CITIES.filter(c =>
+      c.name.includes(q) ||
+      c.en.toLowerCase().includes(q) ||
+      c.region.includes(q) ||
+      (c.name + c.region).includes(q)
+    ).slice(0, 12);
+  }
+
+  function renderDropdown(results) {
+    currentResults = results;
+    highlightIdx = -1;
+    if (results.length === 0 && input.value.trim().length > 0) {
+      dropdown.innerHTML = '<div class="location-empty">未找到匹配城市</div>';
+      dropdown.classList.add('open');
+      return;
+    }
+    if (results.length === 0) {
+      dropdown.classList.remove('open');
+      return;
+    }
+    dropdown.innerHTML = results.map((c, i) => `
+      <div class="location-item" data-index="${i}">
+        <div class="location-item__pin">📍</div>
+        <div class="location-item__info">
+          <div class="location-item__name">${c.name} <span style="color:var(--text-muted);font-size:12px;font-family:var(--font-body)">${c.en}</span></div>
+          <div class="location-item__meta">${c.region} · UTC${c.tz >= 0 ? '+' : ''}${c.tz}</div>
+        </div>
+        <div class="location-item__coord">${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}</div>
+      </div>
+    `).join('');
+    dropdown.classList.add('open');
+  }
+
+  function selectCity(city) {
+    document.getElementById('lat').value = city.lat;
+    document.getElementById('lng').value = city.lng;
+    document.getElementById('tz').value = city.tz;
+    input.value = '';
+    dropdown.classList.remove('open');
+    selectedText.textContent = `${city.name} (${city.en}) · ${city.region} · ${city.lat.toFixed(2)}°, ${city.lng.toFixed(2)}° · UTC${city.tz >= 0 ? '+' : ''}${city.tz}`;
+    selected.classList.add('visible');
+  }
+
+  input.addEventListener('input', () => {
+    const results = searchCities(input.value);
+    renderDropdown(results);
+  });
+
+  input.addEventListener('focus', () => {
+    if (input.value.trim().length > 0) {
+      const results = searchCities(input.value);
+      renderDropdown(results);
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (!dropdown.classList.contains('open') || currentResults.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightIdx = Math.min(highlightIdx + 1, currentResults.length - 1);
+      updateHighlight();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightIdx = Math.max(highlightIdx - 1, 0);
+      updateHighlight();
+    } else if (e.key === 'Enter' && highlightIdx >= 0) {
+      e.preventDefault();
+      selectCity(currentResults[highlightIdx]);
+    } else if (e.key === 'Escape') {
+      dropdown.classList.remove('open');
+    }
+  });
+
+  function updateHighlight() {
+    dropdown.querySelectorAll('.location-item').forEach((el, i) => {
+      el.classList.toggle('highlighted', i === highlightIdx);
+      if (i === highlightIdx) el.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  dropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.location-item');
+    if (item) {
+      const idx = parseInt(item.dataset.index);
+      selectCity(currentResults[idx]);
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    selected.classList.remove('visible');
+    document.getElementById('lat').value = '';
+    document.getElementById('lng').value = '';
+    document.getElementById('tz').value = '';
+    input.focus();
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.location-field')) {
+      dropdown.classList.remove('open');
+    }
+  });
+
+  // Set default location (芜湖 based on initial lat/lng values)
+  selectedText.textContent = '芜湖 (Wuhu) · 安徽 · 30.94°, 118.75° · UTC+8';
+  selected.classList.add('visible');
 })();
 
 // === Tabs ===
