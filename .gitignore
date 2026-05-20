@@ -38,3 +38,9 @@ robin_chart.html
 
 # Swiss Ephemeris data files (if downloaded)
 *.se1
+
+# Claude Code
+.claude/
+
+# Playwright MCP
+.playwright-mcp/
