@@ -5,16 +5,18 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 import os
 
 from hd_api.dependencies import (
     do_calculate, do_reading, get_gate_info, get_channel_info, get_type_info,
 )
+from hd_api.database import init_db, get_db, save_record, ChartRecord
 from hd_interp.readings.gate_readings import GATE_READINGS
 from hd_interp.readings.channel_readings import CHANNEL_READINGS
 
@@ -32,6 +34,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database on startup
+@app.on_event("startup")
+def startup_event():
+    init_db()
+
 
 # Simple LRU cache with max size to prevent unbounded memory growth
 _CACHE_MAX_SIZE = 256
@@ -104,20 +112,23 @@ def _chart_to_dict(chart) -> dict:
 
 
 @app.post("/chart")
-def calculate_chart_api(req: ChartRequest):
+def calculate_chart_api(req: ChartRequest, db: Session = Depends(get_db)):
     """Calculate a Human Design chart from birth data."""
     try:
         chart = do_calculate(
             req.year, req.month, req.day, req.hour, req.minute,
             req.timezone_offset, req.lat, req.lng,
         )
-        return _chart_to_dict(chart)
+        chart_dict = _chart_to_dict(chart)
+        # Persist to database
+        save_record(db, req.model_dump(), chart_dict)
+        return chart_dict
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/reading")
-def calculate_reading_api(req: ChartRequest, output_format: Optional[str] = "json"):
+def calculate_reading_api(req: ChartRequest, output_format: Optional[str] = "json", db: Session = Depends(get_db)):
     """Calculate chart and generate full Chinese interpretation."""
     try:
         chart = do_calculate(
@@ -126,6 +137,9 @@ def calculate_reading_api(req: ChartRequest, output_format: Optional[str] = "jso
         )
         reading = do_reading(chart)
         chart_dict = _chart_to_dict(chart)
+
+        # Persist to database
+        save_record(db, req.model_dump(), chart_dict)
 
         cid = _chart_id(req)
         _cache_put(cid, {'chart': chart_dict, 'reading': reading})
@@ -209,6 +223,88 @@ def type_info(type_name: str):
     from hd_interp.readings.type_readings import TYPE_READINGS
     type_reading = TYPE_READINGS.get(type_name, {})
     return {**info, 'title': type_reading.get('title', ''), 'body': type_reading.get('body', '')}
+
+
+# ============================================================
+# Records (history) endpoints
+# ============================================================
+
+@app.get("/records")
+def list_records(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(20, ge=1, le=100, description="Items per page"),
+    type_key: Optional[str] = Query(None, description="Filter by type key (e.g. Generator)"),
+    profile: Optional[str] = Query(None, description="Filter by profile (e.g. 1/5)"),
+    db: Session = Depends(get_db),
+):
+    """List chart calculation history with pagination and optional filters."""
+    query = db.query(ChartRecord)
+    if type_key:
+        query = query.filter(ChartRecord.type_key == type_key)
+    if profile:
+        query = query.filter(ChartRecord.profile == profile)
+
+    total = query.count()
+    records = (
+        query.order_by(ChartRecord.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    items = []
+    for r in records:
+        items.append({
+            "id": r.id,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "year": r.year,
+            "month": r.month,
+            "day": r.day,
+            "hour": r.hour,
+            "minute": r.minute,
+            "timezone_offset": r.timezone_offset,
+            "lat": r.lat,
+            "lng": r.lng,
+            "type_key": r.type_key,
+            "type_zh": r.type_zh,
+            "authority_zh": r.authority_zh,
+            "profile": r.profile,
+            "definition_type": r.definition_type,
+            "channels_json": r.channels_json,
+            "incarnation_cross_zh": r.incarnation_cross_zh,
+        })
+
+    return {"total": total, "page": page, "size": size, "items": items}
+
+
+@app.get("/records/{record_id}")
+def get_record(record_id: int, db: Session = Depends(get_db)):
+    """Get a single chart record by ID, including full result JSON."""
+    record = db.query(ChartRecord).filter(ChartRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    result = {
+        "id": record.id,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+        "year": record.year,
+        "month": record.month,
+        "day": record.day,
+        "hour": record.hour,
+        "minute": record.minute,
+        "timezone_offset": record.timezone_offset,
+        "lat": record.lat,
+        "lng": record.lng,
+        "type_key": record.type_key,
+        "type_zh": record.type_zh,
+        "authority_zh": record.authority_zh,
+        "profile": record.profile,
+        "definition_type": record.definition_type,
+        "channels_json": record.channels_json,
+        "incarnation_cross_zh": record.incarnation_cross_zh,
+        "result": json.loads(record.result_json) if record.result_json else None,
+    }
+    return result
 
 
 # Mount static files and serve index

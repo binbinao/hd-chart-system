@@ -39,6 +39,9 @@ robin_chart.html
 # Swiss Ephemeris data files (if downloaded)
 *.se1
 
+# SQLite database
+*.db
+
 # Claude Code
 .claude/
 
