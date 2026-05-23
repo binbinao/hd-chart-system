@@ -626,7 +626,7 @@ body {
 }
 @keyframes orbPulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.06); opacity: 0.7; }
+  50% { transform: scale(1.03); opacity: 0.85; }
 }
 
 .ai-trigger__title {
@@ -737,7 +737,7 @@ body {
 @keyframes constellationSpin { to { transform: rotate(360deg); } }
 @keyframes dotPulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.8); opacity: 0.5; }
+  50% { transform: scale(1.3); opacity: 0.6; }
 }
 
 .ai-loading__text {
@@ -745,11 +745,6 @@ body {
   font-size: 14px;
   color: var(--text-secondary);
   letter-spacing: 1px;
-  animation: textBreath 2s ease-in-out infinite;
-}
-@keyframes textBreath {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
 
 /* AI Stream Output */
@@ -812,13 +807,14 @@ body {
   display: inline-block;
   width: 2px;
   height: 1em;
-  background: var(--gold);
+  background: var(--gold-dim);
   margin-left: 2px;
   vertical-align: text-bottom;
-  animation: cursorBlink 0.8s step-end infinite;
+  opacity: 0.6;
+  animation: cursorBlink 1s ease-in-out infinite;
 }
 @keyframes cursorBlink {
-  0%, 100% { opacity: 1; }
+  0%, 100% { opacity: 0.6; }
   50% { opacity: 0; }
 }
 
@@ -937,7 +933,7 @@ body {
       <button class="tab-btn" data-tab="channels">Channels</button>
       <button class="tab-btn" data-tab="centers">Centers</button>
       <button class="tab-btn" data-tab="reading">Reading</button>
-      <button class="tab-btn" data-tab="ai" style="color:var(--gold-dim)">✦ AI 解读</button>
+      <button class="tab-btn" data-tab="ai">Analysis</button>
     </nav>
 
     <div class="tab-panel active" id="panel-bodygraph">
@@ -973,7 +969,7 @@ body {
           <div class="ai-trigger__orb" onclick="startAiReading()">
             <div class="ai-trigger__orb-icon">✦</div>
           </div>
-          <div class="ai-trigger__title">AI 深度解读</div>
+          <div class="ai-trigger__title">AI Analysis</div>
           <div class="ai-trigger__desc">基于你的完整人类图数据，AI 将为你生成个性化的深度分析与人生建议</div>
           <button class="ai-btn-start" id="aiStartBtn" onclick="startAiReading()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
@@ -1450,7 +1446,7 @@ async function startAiReading() {
     // Switch to stream state
     loading.classList.remove('active');
     stream.classList.add('active');
-    content.innerHTML = '<span class="ai-stream__cursor"></span>';
+    content.innerHTML = '<div class="reading-content" id="aiRendered"></div><span class="ai-stream__cursor"></span>';
     statusDot.classList.remove('done');
     statusText.textContent = '正在生成';
 
@@ -1458,6 +1454,23 @@ async function startAiReading() {
     const decoder = new TextDecoder();
     let fullText = '';
     let buffer = '';
+    let renderScheduled = false;
+
+    // Throttled render: only re-parse markdown at most every 300ms
+    function scheduleRender() {
+      if (renderScheduled) return;
+      renderScheduled = true;
+      setTimeout(() => {
+        renderScheduled = false;
+        const rendered = typeof marked !== 'undefined'
+          ? marked.parse(fullText)
+          : fullText.replace(/\n/g, '<br>');
+        const el = document.getElementById('aiRendered');
+        if (el) el.innerHTML = rendered;
+        // Keep cursor visible at end
+        content.scrollTop = content.scrollHeight;
+      }, 300);
+    }
 
     while (true) {
       const { done, value } = await reader.read();
@@ -1472,13 +1485,14 @@ async function startAiReading() {
         const payload = line.slice(6).trim();
 
         if (payload === '[DONE]') {
-          // Streaming complete
+          // Streaming complete — final render
           statusDot.classList.add('done');
           statusText.textContent = '生成完毕';
           actions.style.display = 'flex';
-          content.innerHTML = typeof marked !== 'undefined'
-            ? '<div class="reading-content">' + marked.parse(fullText) + '</div>'
-            : '<div class="reading-content">' + fullText.replace(/\n/g, '<br>') + '</div>';
+          const finalHtml = typeof marked !== 'undefined'
+            ? marked.parse(fullText)
+            : fullText.replace(/\n/g, '<br>');
+          content.innerHTML = '<div class="reading-content">' + finalHtml + '</div>';
           startBtn.disabled = false;
           return;
         }
@@ -1490,13 +1504,7 @@ async function startAiReading() {
           }
           if (data.content) {
             fullText += data.content;
-            // Render incrementally with cursor
-            const rendered = typeof marked !== 'undefined'
-              ? marked.parse(fullText)
-              : fullText.replace(/\n/g, '<br>');
-            content.innerHTML = '<div class="reading-content">' + rendered + '</div><span class="ai-stream__cursor"></span>';
-            // Auto-scroll to bottom
-            content.scrollTop = content.scrollHeight;
+            scheduleRender();
           }
         } catch (parseErr) {
           if (parseErr.message && parseErr.message.startsWith('AI')) {
