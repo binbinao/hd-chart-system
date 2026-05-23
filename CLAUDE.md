@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Install dependencies
-pip install pyswisseph fastapi uvicorn pydantic sqlalchemy pytest
+pip install pyswisseph fastapi uvicorn pydantic sqlalchemy openai python-dotenv pytest
 
 # Run all tests
 pytest tests/
@@ -44,6 +44,7 @@ CalculateRequest → hd_calc → ChartResult → hd_interp → reading dict
 - **`hd_render/renderer.py`** — Generates SVG bodygraph. Gate positions are calculated as angular offsets around center perimeters. Channels colored by activation source (personality=black, design=red, both=striped).
 - **`hd_interp/interpret.py`** — Assembles reading dict by looking up each chart element in the readings tables. Output is a nested dict, formatted by `formatter.py` into Markdown/JSON/plain text.
 - **`hd_api/database.py`** — SQLite persistence via SQLAlchemy. Stores every chart calculation (birth data + full result JSON) in `hd_records.db`. Provides `save_record()` for writes and ORM model `ChartRecord` for queries. DB path configurable via `HD_DB_PATH` env var.
+- **`hd_api/ai_service.py`** — AI deep reading via OpenAI-compatible API. Reads config from env vars (`AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`). Uses `format_reading_markdown()` output as LLM context. `stream_ai_reading()` yields SSE events for streaming responses.
 
 ### Type determination logic (in `analysis.py`)
 

@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 import os
@@ -17,6 +17,7 @@ from hd_api.dependencies import (
     do_calculate, do_reading, get_gate_info, get_channel_info, get_type_info,
 )
 from hd_api.database import init_db, get_db, save_record, ChartRecord
+from hd_api.ai_service import get_ai_config, stream_ai_reading
 from hd_interp.readings.gate_readings import GATE_READINGS
 from hd_interp.readings.channel_readings import CHANNEL_READINGS
 
@@ -305,6 +306,48 @@ def get_record(record_id: int, db: Session = Depends(get_db)):
         "result": json.loads(record.result_json) if record.result_json else None,
     }
     return result
+
+
+# ============================================================
+# AI Analysis endpoints
+# ============================================================
+
+@app.get("/ai-config")
+def ai_config_status():
+    """Check AI service configuration status."""
+    return get_ai_config()
+
+
+@app.post("/ai-reading")
+def ai_reading(req: ChartRequest, db: Session = Depends(get_db)):
+    """Generate AI-powered deep analysis of a Human Design chart (SSE stream)."""
+    config = get_ai_config()
+    if not config["configured"]:
+        raise HTTPException(
+            status_code=503,
+            detail="AI 服务未配置。请设置 AI_API_KEY 环境变量。"
+        )
+
+    try:
+        chart = do_calculate(
+            req.year, req.month, req.day, req.hour, req.minute,
+            req.timezone_offset, req.lat, req.lng,
+        )
+        # Persist to database
+        chart_dict = _chart_to_dict(chart)
+        save_record(db, req.model_dump(), chart_dict)
+
+        return StreamingResponse(
+            stream_ai_reading(chart),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Mount static files and serve index
