@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Install dependencies
-pip install pyswisseph fastapi uvicorn pydantic sqlalchemy openai python-dotenv pytest
+# Install dependencies (floor-pinned >= constraints, no lockfile)
+pip install -r requirements.txt
 
 # Run all tests
 pytest tests/
@@ -17,11 +17,17 @@ pytest tests/test_calculator.py::TestRobinChart
 # Run a single test
 pytest tests/test_calculator.py::TestRobinChart::test_type_is_generator_family
 
-# Start the API server (port 18090)
+# Start the API server (port 18090; overridable via PORT env)
 python -m hd_api.main
 # Web UI: http://localhost:18090
 # Swagger docs: http://localhost:18090/docs
+
+# Container / deploy (Dockerfile is python:3.11-slim; fly.io region hkg)
+docker build -t hd-chart-system .
+fly deploy
 ```
+
+No linter, formatter, Makefile, `pyproject.toml`, or CI is configured.
 
 ## Architecture
 
@@ -38,7 +44,7 @@ CalculateRequest → hd_calc → ChartResult → hd_interp → reading dict
 ### Key modules
 
 - **`hd_constants.py`** — Single source of truth for all HD system data: gate order (I Ching wheel at 302° offset), center definitions, channel mappings, type determination rules, authority priority, incarnation cross lookup tables. All other modules import from here.
-- **`hd_calc/calculator.py`** — Core astronomical calculation. Uses `pyswisseph` Moshier ephemeris (no external .se1 files needed). The critical `find_design_date()` uses Newton-Raphson iteration to find when the Sun was 88° behind birth position. **Must use `FLG_SPEED` flag** or iteration won't converge.
+- **`hd_calc/calculator.py`** — Core astronomical calculation. Uses `pyswisseph` Moshier ephemeris (no external .se1 files needed). The critical `find_design_date()` uses Newton-Raphson iteration to find when the Sun was exactly 88° of *ecliptic longitude* behind the birth Sun (**not** 88 days); initial guess `birth_jd − 88/0.9856`, convergence 1e-8, max 50 iterations. **Must use `FLG_SPEED` flag** or solar speed reads as 0, the iteration never converges, and every Design-side planet position is wrong.
 - **`hd_calc/analysis.py`** — Derives higher-level HD properties from raw planet positions: finds channels (both gates present), determines defined centers (connected via complete channel), determines type (Generator/Manifestor/Projector/Reflector logic based on Sacral and motor-to-Throat connectivity via BFS), authority priority chain, definition type (single/split/triple/quadruple via BFS connected components), and incarnation cross lookup.
 - **`adapters.py`** — Converts `ChartResult` dataclass → dict format expected by `hd_render`. Necessary because the renderer predates the dataclass models.
 - **`hd_render/renderer.py`** — Generates SVG bodygraph. Gate positions are calculated as angular offsets around center perimeters. Channels colored by activation source (personality=black, design=red, both=striped).
