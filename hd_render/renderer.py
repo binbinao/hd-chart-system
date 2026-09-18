@@ -43,22 +43,45 @@ for center, gates in GATE_POSITIONS.items():
         GATE_TO_POSITION[gate] = (center, gx, gy, angle)
 
 
+def _channel_endpoint_colors(personality_gates, design_gates, g1, g2):
+    """Per-gate activation color: 'personality', 'design', 'both', or None.
+
+    Each half of a channel is colored by its own gate's activation, so a channel
+    with gate A conscious and gate B unconscious is half-black / half-red rather
+    than a single 'both' bucket. None means the gate is not activated at all
+    (a half-hanging channel, which is not a defined channel).
+    """
+
+    def _color_for(gate):
+        in_p = gate in personality_gates
+        in_d = gate in design_gates
+        if in_p and in_d:
+            return 'both'
+        if in_p:
+            return 'personality'
+        if in_d:
+            return 'design'
+        return None
+
+    return _color_for(g1), _color_for(g2)
+
+
 def _determine_channel_type(personality_gates, design_gates, g1, g2):
-    """Determine if a channel is personality (black), design (red), or both (striped)."""
-    p1 = g1 in personality_gates
-    p2 = g2 in personality_gates
-    d1 = g1 in design_gates
-    d2 = g2 in design_gates
+    """Legacy single-color classification used by _channel_svg.
 
-    has_p = p1 or p2
-    has_d = d1 or d2
-
-    if has_p and has_d:
-        return 'both'
-    elif has_p:
+    Derived from the per-endpoint colors; maps the per-gate result back to one
+    of 'personality' / 'design' / 'both' for the current single-stroke drawing.
+    Scope B replaces the single stroke with two per-endpoint halves drawn from
+    _channel_endpoint_colors directly.
+    """
+    c1, c2 = _channel_endpoint_colors(personality_gates, design_gates, g1, g2)
+    c1 = c1 or 'design'
+    c2 = c2 or 'design'
+    if c1 == 'personality' and c2 == 'personality':
         return 'personality'
-    else:
+    if c1 == 'design' and c2 == 'design':
         return 'design'
+    return 'both'
 
 
 def _determine_gate_type(personality_gates, design_gates, gate):
@@ -86,9 +109,10 @@ def _get_authority(chart):
 
 
 def _get_strategy(chart):
-    """Get strategy from type."""
-    hd_type = chart.get('type', 'Generator')
-    type_info = TYPES.get(hd_type, TYPES['Generator'])
+    """Get strategy from type. Keyed on type_key (no spaces); the display
+    'type' may be 'Manifesting Generator' (with a space) and miss TYPES."""
+    type_key = chart.get('type_key') or chart.get('type', 'Generator')
+    type_info = TYPES.get(type_key, TYPES['Generator'])
     return type_info['strategy_en']
 
 
@@ -235,11 +259,12 @@ def _channel_svg(g1, g2, channel_type):
 
 def _header_svg(chart):
     """Generate SVG for the header section."""
-    hd_type = chart.get('type', 'Generator')
+    hd_type = chart.get('type', 'Generator')  # display name
+    type_key = chart.get('type_key') or hd_type  # lookup key (no spaces)
     profile = chart.get('profile', '')
     authority = _get_authority(chart)
     strategy = _get_strategy(chart)
-    type_color = S.TYPE_COLORS.get(hd_type, '#ffffff')
+    type_color = S.TYPE_COLORS.get(type_key, '#ffffff')
     
     svg = ''
     y = 30
@@ -375,17 +400,20 @@ def render_bodygraph(chart, output_path=None):
     
     # Start building SVG
     parts = []
-    parts.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{S.VIEWBOX}" width="{S.CANVAS_WIDTH}" height="{S.CANVAS_HEIGHT}" style="max-width:100%;height:auto;">')
+    parts.append(
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{S.VIEWBOX}" '
+        f'width="{S.CANVAS_WIDTH}" height="{S.CANVAS_HEIGHT}" '
+        f'role="img" aria-labelledby="bdy-title bdy-desc" '
+        f'style="max-width:100%;height:auto;">'
+    )
+    _type = chart.get('type', '')
+    _profile = chart.get('profile', '')
+    parts.append(f'<title id="bdy-title">Human Design Bodygraph — {_type} {_profile}</title>')
+    parts.append(f'<desc id="bdy-desc">Human Design bodygraph for a {_type} with profile {_profile}.</desc>')
     parts.append(_defs_svg())
-    
-    # Background
-    parts.append(f'  <rect width="{S.CANVAS_WIDTH}" height="{S.CANVAS_HEIGHT}" fill="{S.BG_COLOR}" rx="12"/>')
-    
-    # Subtle radial gradient overlay
-    parts.append(f'  <rect width="{S.CANVAS_WIDTH}" height="{S.CANVAS_HEIGHT}" fill="url(#bgGrad)" rx="12" opacity="0.5"/>')
-    # Add bg gradient to defs... let me just inline a circle
-    parts.append(f'  <circle cx="{S.CANVAS_WIDTH//2}" cy="450" r="400" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.04"/>')
-    parts.append(f'  <circle cx="{S.CANVAS_WIDTH//2}" cy="450" r="300" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.03"/>')
+
+    # Light bodygraph background (the page chrome around the SVG stays dark).
+    parts.append(f'  <rect width="{S.CANVAS_WIDTH}" height="{S.CANVAS_HEIGHT}" fill="{S.BODYGRAPH_BG_COLOR}" rx="12"/>')
     
     # Header
     parts.append(_header_svg(chart))

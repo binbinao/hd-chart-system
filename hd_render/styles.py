@@ -9,6 +9,9 @@ CANVAS_WIDTH = 800
 CANVAS_HEIGHT = 1100
 VIEWBOX = f"0 0 {CANVAS_WIDTH} {CANVAS_HEIGHT}"
 BG_COLOR = "#1a1a2e"
+# Light bodygraph card: the SVG is a light surface embedded in the dark page,
+# so black (personality) channels and dark text stay legible (>=3:1 / >=4.5:1).
+BODYGRAPH_BG_COLOR = "#f5f1e8"
 
 # ============================================================
 # Center Colors (Traditional HD colors)
@@ -38,7 +41,7 @@ CENTER_BORDER_COLORS = {
     'Root':        '#8A6840',
 }
 
-UNDEFINED_FILL = '#2a2a4a'
+UNDEFINED_FILL = '#e8e2d4'
 UNDEFINED_BORDER_WIDTH = 2.5
 
 # ============================================================
@@ -91,9 +94,9 @@ CHANNEL_WIDTH = 3.5
 # Text Styles
 # ============================================================
 HEADER_FONT = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-HEADER_COLOR = '#e0e0e0'
-SUBHEADER_COLOR = '#a0a0b0'
-GATE_NUMBER_COLOR = '#ffffff'
+HEADER_COLOR = '#2a2a3a'
+SUBHEADER_COLOR = '#555566'
+GATE_NUMBER_COLOR = '#1a1a1a'
 CENTER_GATE_COLOR = '#1a1a1a'
 
 # ============================================================

@@ -26,6 +26,7 @@ def chart_to_render_dict(chart_result):
         'channels': channels,
         'defined_centers': defined_centers,
         'type': chart_result.type_en or chart_result.type_zh,
+        'type_key': chart_result.type_key,
         'profile': chart_result.profile,
         'authority': chart_result.authority_zh,
         'birth_info': {
