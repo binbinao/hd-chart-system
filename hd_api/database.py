@@ -3,14 +3,51 @@ import json
 import os
 from datetime import datetime, timezone
 
-from sqlalchemy import create_engine, Column, Integer, Float, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, Float, Text, DateTime, event
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 # Database file lives next to the running script (project root when run via `python -m hd_api.main`)
-_DB_PATH = os.environ.get("HD_DB_PATH", "hd_records.db")
-_DATABASE_URL = f"sqlite:///{_DB_PATH}"
 
-engine = create_engine(_DATABASE_URL, connect_args={"check_same_thread": False})
+
+def _default_db_path():
+    """Package-anchored default: project root, not the launch cwd, so launching
+    from another directory does not silently open an empty DB."""
+    here = os.path.dirname(os.path.abspath(__file__))  # hd_api/
+    project_root = os.path.dirname(here)
+    return os.path.join(project_root, "hd_records.db")
+
+
+def resolve_db_path():
+    """HD_DB_PATH env overrides; otherwise the package-anchored absolute default."""
+    env = os.environ.get("HD_DB_PATH")
+    return env if env else _default_db_path()
+
+
+def create_db_engine(db_path):
+    """Build a SQLAlchemy engine configured for safe concurrent SQLite access.
+
+    WAL journal + busy_timeout + a 15s connection lock timeout so concurrent
+    writers wait instead of failing with 'database is locked' (which previously
+    surfaced as a 500 on /chart, /reading, and /ai-reading).
+    """
+    engine = create_engine(
+        f"sqlite:///{db_path}",
+        connect_args={"check_same_thread": False, "timeout": 15},
+    )
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragmas(dbapi_conn, conn_record):
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.execute("PRAGMA busy_timeout=5000")
+        cur.execute("PRAGMA synchronous=NORMAL")
+        cur.close()
+
+    return engine
+
+
+_DB_PATH = resolve_db_path()
+engine = create_db_engine(_DB_PATH)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -46,9 +83,27 @@ class ChartRecord(Base):
     result_json = Column(Text)
 
 
-def init_db():
-    """Create tables if they don't exist."""
-    Base.metadata.create_all(bind=engine)
+def init_db(bind=None):
+    """Create tables if missing and ensure filter/sort indexes exist.
+
+    Idempotent: CREATE INDEX IF NOT EXISTS upgrades an existing DB in place
+    without a migration tool. Accepts an optional engine for testing.
+    """
+    target = bind if bind is not None else engine
+    Base.metadata.create_all(bind=target)
+    with target.connect() as conn:
+        conn.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS ix_chart_records_type_key "
+            "ON chart_records (type_key)"
+        )
+        conn.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS ix_chart_records_profile "
+            "ON chart_records (profile)"
+        )
+        conn.exec_driver_sql(
+            "CREATE INDEX IF NOT EXISTS ix_chart_records_created_at "
+            "ON chart_records (created_at)"
+        )
 
 
 def get_db():
