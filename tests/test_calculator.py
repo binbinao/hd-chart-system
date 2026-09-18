@@ -317,3 +317,107 @@ class TestIncarnationCross:
         chart = calculate_chart(req)
         assert len(chart.incarnation_cross_gates) == 4
         assert all(1 <= g <= 64 for g in chart.incarnation_cross_gates)
+
+
+class TestBirthDataValidation:
+    """calculate_chart must reject impossible calendar dates and times with a
+    clear ValueError instead of silently producing a confidently-wrong chart.
+    """
+
+    def _req(self, **kw):
+        base = dict(year=2000, month=6, day=15, hour=6, minute=0,
+                    timezone_offset=0.0, lat=0.0, lng=0.0)
+        base.update(kw)
+        return CalculateRequest(**base)
+
+    def test_feb_30_raises(self):
+        with pytest.raises(ValueError):
+            calculate_chart(self._req(month=2, day=30))
+
+    def test_month_13_raises(self):
+        with pytest.raises(ValueError):
+            calculate_chart(self._req(month=13, day=1))
+
+    def test_day_45_raises(self):
+        with pytest.raises(ValueError):
+            calculate_chart(self._req(day=45))
+
+    def test_hour_99_raises(self):
+        with pytest.raises(ValueError):
+            calculate_chart(self._req(hour=99))
+
+    def test_minute_60_raises(self):
+        with pytest.raises(ValueError):
+            calculate_chart(self._req(minute=60))
+
+    def test_valid_date_still_works(self):
+        chart = calculate_chart(self._req(year=2000, month=2, day=29))
+        assert chart.design_date_approx  # leap day is valid, must not raise
+
+
+class TestDesignDateLocalTZ:
+    """design_date_approx must be expressed in the birth local timezone, not UT.
+
+    Birth 2007-09-28 14:28 +08:00: the design moment (Sun 88deg behind) falls
+    on 2007-06-29 in +08 but 2007-06-28 in UT. The shown date must be local.
+    """
+
+    def test_design_date_uses_local_timezone(self):
+        req = CalculateRequest(
+            year=2007, month=9, day=28, hour=14, minute=28,
+            timezone_offset=8.0, lat=30.94, lng=118.75,
+        )
+        chart = calculate_chart(req)
+        assert chart.design_date_approx == '2007-06-29'
+
+
+class TestPropertySweep:
+    """Invariant sweep over many random births. Cheaply guards the calc +
+    analysis contract: only the 12 canonical profiles are reachable,
+    definition_type stays in its declared set, the 88deg Sun-arc invariant
+    holds, and every activation is in range. Pinned seed for determinism.
+    """
+
+    def test_invariants_hold_across_random_births(self):
+        import random
+        import calendar
+        from hd_constants import PROFILE_TO_ANGLE
+
+        random.seed(42)
+        canonical_def = {'single', 'split', 'triple', 'quadruple', 'none'}
+
+        for _ in range(200):
+            year = random.randint(1900, 2030)
+            month = random.randint(1, 12)
+            day = random.randint(1, calendar.monthrange(year, month)[1])
+            hour = random.randint(0, 23)
+            minute = random.randint(0, 59)
+            tz = random.choice([-8.0, -5.0, 0.0, 2.0, 8.0, 9.0])
+            req = CalculateRequest(
+                year=year, month=month, day=day,
+                hour=hour, minute=minute, timezone_offset=tz,
+                lat=0.0, lng=0.0,
+            )
+            chart = calculate_chart(req)
+
+            # Profile is always one of the 12 geometrically reachable keys.
+            assert chart.profile in PROFILE_TO_ANGLE, (
+                f"non-canonical profile {chart.profile} "
+                f"(y={year} m={month} d={day} h={hour} tz={tz})"
+            )
+            # definition_type honors the declared contract.
+            assert chart.definition_type in canonical_def, (
+                f"non-canonical definition_type {chart.definition_type}"
+            )
+            # Design Sun is exactly 88deg of ecliptic longitude behind birth Sun.
+            arc = (chart.personality['Sun'].longitude
+                   - chart.design['Sun'].longitude) % 360.0
+            assert abs(arc - 88.0) < 1e-6, (
+                f"Sun arc {arc} != 88 "
+                f"(y={year} m={month} d={day} h={hour} tz={tz})"
+            )
+            # Every activation is in valid range.
+            for side in (chart.personality, chart.design):
+                for act in side.values():
+                    assert 1 <= act.gate <= 64
+                    assert 1 <= act.line <= 6

@@ -2,6 +2,7 @@
 import sys
 import math
 import os
+import datetime
 from collections import deque
 
 import swisseph as swe
@@ -115,6 +116,20 @@ def build_activations(positions: dict) -> dict:
 
 def calculate_chart(req: CalculateRequest) -> ChartResult:
     """Main entry point: compute a full Human Design chart."""
+    # Validate the calendar date and wall-clock time before the ephemeris;
+    # swe.julday silently normalizes out-of-range values, which would otherwise
+    # produce a confidently-wrong chart instead of a clear error.
+    try:
+        datetime.date(req.year, req.month, req.day)
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid birth date {req.year}-{req.month:02d}-{req.day:02d}: {exc}"
+        ) from None
+    if not 0 <= req.hour <= 23:
+        raise ValueError(f"hour must be 0-23, got {req.hour}")
+    if not 0 <= req.minute <= 59:
+        raise ValueError(f"minute must be 0-59, got {req.minute}")
+
     # Convert birth date/time to Julian Day (UT)
     hour_decimal = req.hour + req.minute / 60.0 - req.timezone_offset
     birth_jd = swe.julday(req.year, req.month, req.day, hour_decimal)
@@ -128,8 +143,9 @@ def calculate_chart(req: CalculateRequest) -> ChartResult:
     design_positions = compute_planet_positions(design_jd)
     design = build_activations(design_positions)
 
-    # Approximate design date string
-    design_date_tuple = swe.revjul(design_jd)
+    # Approximate design date string, expressed in the birth local timezone
+    # (not UT) so it matches the user's birth-date convention.
+    design_date_tuple = swe.revjul(design_jd + req.timezone_offset / 24.0)
     design_date_str = f"{int(design_date_tuple[0]):04d}-{int(design_date_tuple[1]):02d}-{int(design_date_tuple[2]):02d}"
 
     # Run analysis

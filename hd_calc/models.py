@@ -21,6 +21,12 @@ class PlanetActivation:
     gate: int
     line: int  # 1-6
 
+    def __post_init__(self):
+        if not (1 <= self.gate <= 64):
+            raise ValueError(f"gate must be 1-64, got {self.gate}")
+        if not (1 <= self.line <= 6):
+            raise ValueError(f"line must be 1-6, got {self.line}")
+
 
 # Type aliases
 Personality = Dict[str, PlanetActivation]
