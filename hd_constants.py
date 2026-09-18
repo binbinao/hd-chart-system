@@ -245,14 +245,25 @@ TYPES = {
 # ============================================================
 
 AUTHORITY_PRIORITY = [
+    # Ordered: the first defined center in this list is the inner authority.
     ('SolarPlexus', {'zh': '情绪型权威', 'en': 'Emotional Authority'}),
     ('Sacral',      {'zh': '荐骨型权威', 'en': 'Sacral Authority'}),
     ('Spleen',      {'zh': '直觉型权威', 'en': 'Splenic Authority'}),
     ('Heart',       {'zh': '意志力权威', 'en': 'Ego Authority'}),
     ('G',           {'zh': '自我型权威', 'en': 'Self Authority'}),
-    ('Throat',      {'zh': '喉咙型权威', 'en': 'Throat Authority'}),
+    # NOTE: 'Throat Authority' is not a real HD authority and is intentionally
+    # absent. A Throat-defined non-Reflector is a Mental Projector whose
+    # authority is Outer (environmental). _determine_authority resolves the
+    # no-inner-authority case type-aware (see REFLECTOR/OUTER_AUTHORITY below);
+    # this None tier is retained only as the renderer's blanket fallback.
     (None,          {'zh': '月循环/无内在权威', 'en': 'Lunar/No Authority'}),
 ]
+
+# Type-aware fallback for charts with NO inner-authority center defined.
+# Reflector -> lunar-cycle authority; any other type (Mental Projector) -> Outer.
+# 'Lunar' is Reflector-only; it must not be assigned to a non-Reflector.
+REFLECTOR_AUTHORITY = {'zh': '月循环权威', 'en': 'Lunar Authority'}
+OUTER_AUTHORITY = {'zh': '外在权威', 'en': 'Outer Authority'}
 
 # ============================================================
 # Profile (Line) descriptions

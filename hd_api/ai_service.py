@@ -14,11 +14,15 @@ from hd_interp.formatter import format_reading_markdown
 # ============================================================
 
 def get_ai_config() -> dict:
-    """Return current AI configuration (safe to expose, no key)."""
-    api_key = os.environ.get("AI_API_KEY", "")
+    """Return AI configuration safe to expose on an unauthenticated endpoint.
+
+    base_url is intentionally omitted: with a self-hosted provider it would
+    leak internal network topology. The key is never returned; a whitespace-only
+    key must not count as configured.
+    """
+    api_key = (os.environ.get("AI_API_KEY") or "").strip()
     return {
         "configured": bool(api_key),
-        "base_url": os.environ.get("AI_BASE_URL", "https://api.openai.com/v1"),
         "model": os.environ.get("AI_MODEL", "gpt-4o"),
     }
 

@@ -8,7 +8,7 @@ from hd_constants import (
     TYPES, AUTHORITY_PRIORITY, LINE_INFO,
     INCARNATION_CROSSES, CROSS_NAMES, CROSS_NAME_OVERRIDES,
     PROFILE_TO_ANGLE, ANGLE_NAMES,
-    MOTOR_CENTERS,
+    MOTOR_CENTERS, REFLECTOR_AUTHORITY, OUTER_AUTHORITY,
 )
 from hd_calc.models import ChartResult, ChannelActivation, CenterInfo
 
@@ -138,21 +138,33 @@ def _determine_type(centers, channels):
         return 'Projector'
 
 
-def _determine_authority(centers):
-    """Determine authority based on defined centers."""
+def _determine_authority(centers, type_key):
+    """Determine authority based on defined centers and type.
+
+    'Throat Authority' is not a real HD authority; a Throat-defined non-Reflector
+    is a Mental Projector. With no inner-authority center defined, the authority
+    is type-aware: Reflector -> Lunar, otherwise (Mental Projector) -> Outer.
+    'Lunar' is Reflector-only.
+    """
     defined = {name for name, c in centers.items() if c.is_defined}
     for center_key, auth_info in AUTHORITY_PRIORITY:
         if center_key is None:
-            return auth_info
+            break  # no inner-authority center; resolve the fallback by type
         if center_key in defined:
             return auth_info
-    return AUTHORITY_PRIORITY[-1][1]
+    if type_key == 'Reflector':
+        return REFLECTOR_AUTHORITY
+    return OUTER_AUTHORITY
 
 
 def _determine_profile(personality, design):
-    """Determine profile from Sun's lines."""
-    p_sun_line = personality.get('Sun', PlanetActivation(0,0,1)).line
-    d_sun_line = design.get('Sun', PlanetActivation(0,0,1)).line
+    """Determine profile from Sun's lines.
+
+    Missing Sun raises KeyError rather than fabricating an invalid '1/1'
+    profile; the 12 real profiles are the only geometrically reachable ones.
+    """
+    p_sun_line = personality['Sun'].line
+    d_sun_line = design['Sun'].line
     return f"{p_sun_line}/{d_sun_line}", p_sun_line, d_sun_line
 
 
@@ -186,8 +198,8 @@ def _determine_definition_type(centers, channels):
                     if neighbor in defined and neighbor not in visited:
                         queue.append(neighbor)
 
-    mapping = {1: 'single', 2: 'split', 3: 'triple_split', 4: 'quadruple_split'}
-    return mapping.get(components, 'quadruple_split')
+    mapping = {1: 'single', 2: 'split', 3: 'triple', 4: 'quadruple'}
+    return mapping.get(components, 'quadruple')
 
 
 def _determine_incarnation_cross(personality, design, profile_str):
@@ -196,10 +208,10 @@ def _determine_incarnation_cross(personality, design, profile_str):
     Uses the new gate+profile lookup (192 crosses = 64 gates × 3 angles).
     Falls back to legacy INCARNATION_CROSSES dict, then to a generic name.
     """
-    p_sun = personality.get('Sun', PlanetActivation(0, 1, 1)).gate
-    p_earth = personality.get('Earth', PlanetActivation(0, 2, 1)).gate
-    d_sun = design.get('Sun', PlanetActivation(0, 3, 1)).gate
-    d_earth = design.get('Earth', PlanetActivation(0, 4, 1)).gate
+    p_sun = personality['Sun'].gate
+    p_earth = personality['Earth'].gate
+    d_sun = design['Sun'].gate
+    d_earth = design['Earth'].gate
     cross_gates = [p_sun, p_earth, d_sun, d_earth]
 
     # --- New lookup: gate + profile → angle → cross name ---
@@ -232,9 +244,6 @@ def _determine_incarnation_cross(personality, design, profile_str):
            cross_gates
 
 
-from hd_calc.models import PlanetActivation  # noqa: E402
-
-
 def analyze_chart(personality, design, personality_positions, design_positions):
     """Analyze a chart and return a ChartResult (minus request/personality/design/date)."""
     p_gates, d_gates = _get_all_gates(personality, design)
@@ -244,7 +253,7 @@ def analyze_chart(personality, design, personality_positions, design_positions):
     centers = _determine_centers(all_gates, channels)
     type_key = _determine_type(centers, channels)
     type_info = TYPES[type_key]
-    authority = _determine_authority(centers)
+    authority = _determine_authority(centers, type_key)
     profile_str, p_line, d_line = _determine_profile(personality, design)
     definition_type = _determine_definition_type(centers, channels)
     cross_zh, cross_en, cross_gates = _determine_incarnation_cross(personality, design, profile_str)
